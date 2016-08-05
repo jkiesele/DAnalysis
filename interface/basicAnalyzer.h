@@ -83,6 +83,8 @@ protected:
 	const bool& getIsSignal()const{return signal_;}
 	void setIsSignal(bool set){signal_=set;}
 
+	bool isTestMode()const{return testmode_;}
+
 private:
 
 	void process();

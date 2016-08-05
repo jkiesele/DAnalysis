@@ -38,22 +38,37 @@ private:
 		//	d_ana::tTreeHandler tree(getSampleFile(),"treename");
 		//	d_ana::tBranchHandler<std::vector<jet> > jets=d_ana::tBranchHandler<float>(&tree,"jets");
 
+		/*
+		 *
+		 * Something with dictionaries for the Delphes classes MIGHT be needed
+		 * tTreeHandler does not work with TChains! This is due to a root limitation
+		 * (at least from root 5). But it should not be a problem.
+		 * Either hadd it or give it same legend name etc.
+		 * For same legend name, output histogram files should just be added (taking into
+		 * account the normalisation). This can be done in the writeOutput() function.
+		 * This function is thread-safe. The file access is blocked while one process writes.
+		 *
+		 */
 
 		std::cout << "event loop on " << getSampleFile()  <<std::endl;
 
+		size_t nevents=1000;
+		if(isTestMode())
+			nevents=100;
+
 		if(id>0)
 			sleep(2); //just to hve different status % in this example
-		for(size_t i=0;i<1000;i++){
+		for(size_t i=0;i<nevents;i++){
 
 			//	tree.setEntry(i); //associate event entry
 
-			reportStatus(i,1000);
+			reportStatus(i,nevents);
 			usleep(4e4);
 
 			//	size_t njets=jets.content()->size(); //how to access the branch content
 		}
 
-		processEndFunction();
+		processEndFunction(); //needs to be called
 	}
 
 
@@ -68,6 +83,8 @@ int main(){
 
 	ana.readFileList("exampleinput.txt");
 	//	ana.setMaxChilds(1);
+
+	//ana.setTestMode(true);//or not
 
 	ana.start();
 

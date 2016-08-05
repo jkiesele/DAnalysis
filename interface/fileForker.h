@@ -60,12 +60,15 @@ public:
 	};
 
 
-
+	static bool debug;
 
 	void setMaxChilds(size_t max){maxchilds_=max;}
 
 	void setOutputFileName(std::string outname){outputfile_=outname;}
 	const std::string& getOutputFileName()const{return outputfile_;}
+
+protected:
+
 	void setInputFiles(const std::vector<std::string>& in){inputfiles_=in;}
 
 	//parent functions
@@ -85,9 +88,6 @@ public:
 	//a number between 0 and 100 (%)
 	int getBusyStatus(const size_t& childindex);
 
-	static bool debug;
-
-protected:
 
 	std::string translateStatus(const fileforker_status&)const;
 
