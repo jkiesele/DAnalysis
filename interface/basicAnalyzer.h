@@ -23,7 +23,6 @@ public:
 
 
 	void readFileList(const std::string& );
-	virtual void analyze(size_t )=0;
 
 
 
@@ -52,29 +51,46 @@ public:
 
 	virtual TString getOutFileName(){
 		if(syst_.Length()){
-                     //   std::cout<<"Hallo   "<<getOutputFileName()<<std::endl;
+			//   std::cout<<"Hallo   "<<getOutputFileName()<<std::endl;
 			return  (TString)getOutputFileName()+"_"+syst_;}
 		else{
-                    //    std::cout<<"Hallo2   "<<getOutputFileName()<<std::endl;
+			//    std::cout<<"Hallo2   "<<getOutputFileName()<<std::endl;
 			return getOutputFileName();}
 	}
 
-private:
-	void process();
+	void start(){
+		runParallels(5);
+	}
+
 
 protected:
 
-	fileForker::fileforker_status  runParallels(int displaystatusinterval);
-
+	/**
+	 * Implements the event loop
+	 */
+	virtual void analyze(size_t )=0;
 	/**
 	 * for child processes
 	 * reports the Status (% of events already processed) to the main program
 	 */
 	void reportStatus(const Long64_t& entry,const Long64_t& nEntries);
 
+	const TString& getSampleFile()const{return inputfile_;}
+	const TString& getLegendName()const{return legendname_;}
+	const int& getColor()const{return col_;}
+	const double& getNorm()const{return norm_;}
+	const size_t& getLegendOrder()const{return legorder_;}
+	const bool& getIsSignal()const{return signal_;}
+	void setIsSignal(bool set){signal_=set;}
 
-	fileForker::fileforker_status writeHistos();
+private:
 
+	void process();
+
+
+
+	fileForker::fileforker_status  writeOutput();
+	fileForker::fileforker_status  runParallels(int displaystatusinterval);
 
 	bool createOutFile()const;
 

@@ -106,6 +106,13 @@ public:
 
 	static std::string splitIntoLines(const std::string &,const size_t& maxchars, const size_t& leftoffset, size_t skipoffset=0);
 
+	template<class T>
+	static std::string toString(T in) {
+		std::ostringstream s;
+		s << in;
+		std::string out = s.str();
+		return out;
+	}
 
 	static std::string fixLength(const char* in, size_t l, bool truncate=true);
 	static std::string fixLength(const TString & in, size_t l, bool truncate=true);

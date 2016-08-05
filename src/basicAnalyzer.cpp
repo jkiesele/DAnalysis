@@ -140,10 +140,10 @@ fileForker::fileforker_status basicAnalyzer::runParallels(int interval){
 				double percentpersecond=getBusyStatus(i)/runningseconds;
 				double estimate=(100-getBusyStatus(i))/percentpersecond;
 				std::cout
-				<< textFormatter::fixLength((TString)(getChildPids().at(i)),7)
+				<< textFormatter::fixLength(textFormatter::toString(getChildPids().at(i)),7)
 				<< textFormatter::fixLength(infiles_.at(i),         50)
 				<< textFormatter::fixLength(translateStatus(getStatus(i)), 15)
-				<< textFormatter::fixLength((TString)(getBusyStatus(i))+"%",4,false);
+				<< textFormatter::fixLength(textFormatter::toString(getBusyStatus(i))+"%",4,false);
 				if(getBusyStatus(i)>4 && getStatus(i) == ff_status_child_busy){
 					std::cout  <<" ETA: ";
 					int minutes=estimate/60;
@@ -193,13 +193,20 @@ void basicAnalyzer::setOutDir(const TString& dir){
 		outdir_=dir+"/";
 }
 
-fileForker::fileforker_status basicAnalyzer::writeHistos(){
+fileForker::fileforker_status basicAnalyzer::writeOutput(){
 	if(debug)
 		std::cout << "basicAnalyzer::writeHistos" <<std::endl;
 
-	//TBI FIXME
+	//TBI FIXME replace by actual output with naming scheme
+	std::cout << "(needs implementation): writing histos for child " <<ownChildIndex() <<
+			" \ninputfile: " <<inputfile_ <<
+			" \nlegendname: " <<legendname_ <<
+			" \ncol: " <<col_ <<
+			" \nlegorder: " <<legorder_ <<
+			" \ncommon output path: "<< getOutPath()<< std::endl;
 
-	return ff_status_child_success;
+
+			return ff_status_child_success;
 }
 
 

@@ -1,0 +1,8 @@
+
+[inputfiles-begin]
+
+
+testinput.root, signal,                633,      1,          1, true
+testinput2.root, background,                633,	 1,          1, true
+
+[inputfiles-end]
