@@ -18,7 +18,7 @@ obj/%.o: src/%.cpp
 
 
 clean: 
-	rm -f obj/*.o
+	rm -f obj/*.o obj/*.d
 	rm -f libDAnalysis.so
 
 -include $(OBJ_FILES:.o=.d)
