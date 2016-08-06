@@ -1,8 +1,7 @@
 
 [inputfiles-begin]
 
-
-testinput.root, signal,                633,      1,          1, true
-testinput2.root, background,                633,	 1,          1, true
+delphes_testsample.root  , signal,                633,	 1,          1, true
+delphes_testsample.root	 , background,                433,   2,          2
 
 [inputfiles-end]

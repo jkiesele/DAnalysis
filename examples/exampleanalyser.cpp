@@ -38,7 +38,14 @@ private:
 		//	d_ana::tTreeHandler tree(getSampleFile(),"treename");
 		//	d_ana::tBranchHandler<std::vector<jet> > jets=d_ana::tBranchHandler<float>(&tree,"jets");
 
+
+
+
 		/*
+		 *
+		 * The delphes trees have arrays instead of vectors, so there needs to be some
+		 * king of explicit buffering. I did not realise this before. You can get ideas from
+		 * https://github.com/jkiesele/TtZAnalysis/blob/master/Analysis/interface/wNTBaseInterface.h
 		 *
 		 * Something with dictionaries for the Delphes classes MIGHT be needed
 		 * tTreeHandler does not work with TChains! This is due to a root limitation
@@ -79,7 +86,10 @@ private:
 int main(){
 
 	exampleanalyser ana;
-	ana.setDataSetDirectory("");
+
+
+	ana.setDataSetDirectory("~/eos/cms/store/group/upgrade/delphes_framework");
+	//adjust to what is needed. should aso be read in from file when we are done with testing
 
 	ana.readFileList("exampleinput.txt");
 	//	ana.setMaxChilds(1);
