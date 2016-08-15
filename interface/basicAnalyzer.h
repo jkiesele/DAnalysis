@@ -38,6 +38,12 @@ public:
 
 	TString getOutPath(){return outdir_+getOutFileName();}
 
+    //adders
+    void addPlot(TString name,TH1* histo, bool replace=false);
+    
+    //removers
+    void rmvPlot(TString name);
+    void rmvPlots(const TRegexp& nameExp);
 
 	//setters
 	void setLumi(double Lumi){lumi_=Lumi;}
@@ -108,6 +114,7 @@ private:
 	std::vector<size_t> legords_;
 	std::vector<bool> issignal_;
 	std::vector<TString> extraopts_;
+    std::map<TString,TH1F*> histos_;
 
 	///child variables
 	TString inputfile_;
