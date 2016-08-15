@@ -2,6 +2,6 @@
 [inputfiles-begin]
 
 delphes_testsample.root  , signal,                633,	 1,          1, true
-delphes_testsample.root	 , background,                433,   2,          2
+$delphes_testsample.root	 , background,                433,   2,          2
 
 [inputfiles-end]

@@ -51,7 +51,7 @@ protected:
 	bool gotentry_;
 	tTreeHandler *t_;
 	TString branchname_;
-	const size_t buf_max_;
+	size_t buf_max_;
 	bool missingbranch_;
 };
 
@@ -66,7 +66,7 @@ int tBranchHandler_createContentsAndAssociate(tBranchHandler<T>*bh, T &rc, T*& r
 		std::cout << "tBranchHandler_createContents: non-array type for "<<bh->getBranchName()<<std::endl;
 	ispointer=false;
 	isprimitive = (boost::is_fundamental<T>::value && ! boost::is_void<T>::value)
-									||(boost::is_pointer<T>::value && boost::is_fundamental<typename boost::remove_pointer<T>::type>::value);
+															||(boost::is_pointer<T>::value && boost::is_fundamental<typename boost::remove_pointer<T>::type>::value);
 
 	if(tBranchHandlerBase::debug && isprimitive)
 		std::cout << "tBranchHandler: " << bh->getBranchName() << ": primitive type"<<std::endl;
@@ -89,7 +89,7 @@ int tBranchHandler_createContentsAndAssociate(tBranchHandler<T*>*bh, T* &rc, T**
 	ispointer=true;
 	rc= new T[bh->buffMax()];
 	isprimitive = (boost::is_fundamental<T>::value && ! boost::is_void<T>::value)
-										||(boost::is_pointer<T>::value && boost::is_fundamental<typename boost::remove_pointer<T>::type>::value);
+																||(boost::is_pointer<T>::value && boost::is_fundamental<typename boost::remove_pointer<T>::type>::value);
 
 	if(tBranchHandlerBase::debug && isprimitive)
 		std::cout << "tBranchHandler: " << bh->getBranchName() << ": primitive type"<<std::endl;
@@ -97,10 +97,13 @@ int tBranchHandler_createContentsAndAssociate(tBranchHandler<T*>*bh, T* &rc, T**
 		rcp=&rc;
 		return bh->tree()->tree()->SetBranchAddress(bh->getBranchName(),rc,&br);
 	}
-	else
-		throw std::runtime_error("tBranchHandler_createContentsAndAssociate: pointer to non-primitive not implemented"); //return bh->tree()->tree()->SetBranchAddress(bh->getBranchName(),&rcp,&br);
-
+	else{
+		rcp=&rc;
+		return bh->tree()->tree()->SetBranchAddress(bh->getBranchName(),&rc,&br);
+	}
 }
+
+
 
 template<class T>
 void tBranchHandler_removeContents(tBranchHandler<T>*b, T &t){
@@ -113,7 +116,8 @@ template<class T>
 void tBranchHandler_removeContents(tBranchHandler<T*>*b, T* &t){
 	if(tBranchHandlerBase::debug)
 		std::cout << "tBranchHandler_removeContents: array type for "<<b->getBranchName()<<std::endl;
-	 delete t;
+	if(t)
+		delete t;
 }
 }
 
@@ -129,15 +133,19 @@ void tBranchHandler_removeContents(tBranchHandler<T*>*b, T* &t){
  *
  */
 template<class T>
+class dBranchHandler;
+template<class T>
 class tBranchHandler : public tBranchHandlerBase{
+	template<class U>
+	friend class dBranchHandler;
 public:
 	tBranchHandler():tBranchHandlerBase(),pcontent_(0),branch_(0),
-	isPrimitive_(false),isPrimitiveArray_(false){
+	isPrimitive_(false),isArray_(false){
 		// doesn't do anything
 		throw std::logic_error("tBranchHandler: default constructor should not be used");
 	}
 	tBranchHandler(tTreeHandler * t, const TString& branchname,  size_t buf_max=1 ):tBranchHandlerBase(buf_max),
-			branch_(0),isPrimitive_(false),isPrimitiveArray_(false){
+			branch_(0),isPrimitive_(false),isArray_(false){
 		if(!t){
 			throw std::runtime_error("tBranchHandler: tree pointer is NULL!");
 		}
@@ -150,7 +158,7 @@ public:
 
 
 		int ret= tBranchHandlerHelpers::tBranchHandler_createContentsAndAssociate
-				(this,realcontent_,pcontent_,branch_,isPrimitive_,isPrimitiveArray_);
+				(this,realcontent_,pcontent_,branch_,isPrimitive_,isArray_);
 
 
 		handleReturns(ret,missingbranch_,allow_missing);
@@ -169,9 +177,9 @@ public:
 			std::cout << "~tBranchHandler: " << branchname_<< std::endl;
 		removeTreeAndBranch(t_,branchname_);
 		if(pcontent_ && !missingbranch_){
-			if(!isPrimitive_)
+			if(!isPrimitive_ && pcontent_)
 				delete pcontent_;
-			 if(isPrimitiveArray_){
+			if(isArray_){
 				tBranchHandlerHelpers::tBranchHandler_removeContents(this,realcontent_);
 			}
 
@@ -196,7 +204,7 @@ public:
 			throw std::out_of_range("tBranchHandler::content: no tree associated");
 		if(!gotentry_){
 			getEntry(t_->currentEntry());
-			if(!isPrimitive_)
+			if(!isPrimitive_ && !isArray_)
 				realcontent_=*pcontent_;//copy high level objects
 		}
 		return &realcontent_;
@@ -211,7 +219,15 @@ public:
 	tTreeHandler* tree(){return t_;}
 	const tTreeHandler* tree()const {return t_;}
 
+
 	const size_t& buffMax()const{return buf_max_;}
+
+protected:
+	const bool& isArray()const{return isArray_;}
+	void newBuffer(const size_t & size){
+		if(!isArray_)return;
+
+	}
 
 private:
 
@@ -228,7 +244,7 @@ private:
 	T  realcontent_;
 	TBranch * branch_;
 	bool isPrimitive_ ;
-	bool isPrimitiveArray_ ;
+	bool isArray_ ;
 
 };
 

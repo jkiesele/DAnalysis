@@ -79,6 +79,7 @@ protected:
 	void reportStatus(const Long64_t& entry,const Long64_t& nEntries);
 
 	const TString& getSampleFile()const{return inputfile_;}
+	TString getSamplePath()const{return datasetdirectory_+"/"+inputfile_;}
 	const TString& getLegendName()const{return legendname_;}
 	const int& getColor()const{return col_;}
 	const double& getNorm()const{return norm_;}
