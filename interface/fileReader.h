@@ -1,12 +1,14 @@
-/*
- * fileReader.h
- *
- *  Created on: Oct 10, 2013
- *      Author: kiesej
- */
-
 #ifndef FILEREADER_H_
 #define FILEREADER_H_
+/** \class d_ana::fileReader
+ *
+ * class to read-in files
+ *
+ * \original author: Jan Kieseler
+ *
+ * more docu
+ *
+ */
 
 
 #include <string>

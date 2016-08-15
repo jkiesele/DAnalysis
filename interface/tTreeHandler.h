@@ -1,12 +1,14 @@
-/*
- * tTreeHandler.h
- *
- *  Created on: Apr 20, 2015
- *      Author: kiesej
- */
-
 #ifndef TTREEHANDLER_H_
 #define TTREEHANDLER_H_
+/** \class d_ana::tTreeHandler
+ *
+ * setting up a root tree in the tBranchHandler framework (more performant and safe)
+ *
+ * \original author: Jan Kieseler
+ *
+ * more docu
+ *
+ */
 
 #include "TTree.h"
 #include "TFile.h"

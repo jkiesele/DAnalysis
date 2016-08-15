@@ -1,12 +1,15 @@
-/*
- * basicAnalyzer.h
- *
- *  Created on: 20 May 2016
- *      Author: kiesej
- */
-
 #ifndef TTZANALYSIS_ANALYSIS_INTERFACE_BASICANALYZER_H_
 #define TTZANALYSIS_ANALYSIS_INTERFACE_BASICANALYZER_H_
+/** \class d_ana::basicAnalyzer
+ *
+ * user-friendly parallel delphes analysis class
+ *
+ * \original author: Jan Kieseler
+ *
+ * more docu
+ *
+ */
+
 
 #include "../interface/fileForker.h"
 #include "TString.h"

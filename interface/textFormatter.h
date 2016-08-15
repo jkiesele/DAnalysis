@@ -1,12 +1,15 @@
-/*
- * textFormatter.h
- *
- *  Created on: May 6, 2014
- *      Author: kiesej
- */
-
 #ifndef TEXTFORMATTER_H_
 #define TEXTFORMATTER_H_
+/** \class d_ana::textFormatter
+ *
+ * class to format text
+ *
+ * \original author: Jan Kieseler
+ *
+ * more docu
+ *
+ */
+
 
 #include <string>
 #include <vector>

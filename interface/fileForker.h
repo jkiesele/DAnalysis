@@ -1,12 +1,14 @@
-/*
- * fileForker.h
- *
- *  Created on: 19 May 2016
- *      Author: kiesej
- */
-
 #ifndef TTZANALYSIS_TOOLS_INTERFACE_FILEFORKER_H_
 #define TTZANALYSIS_TOOLS_INTERFACE_FILEFORKER_H_
+/** \class d_ana::fileForker
+ *
+ * baseline implementation for forking a process
+ *
+ * \original author: Jan Kieseler
+ *
+ * more docu
+ *
+ */
 
 /*
  *

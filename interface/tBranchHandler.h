@@ -1,12 +1,15 @@
-/*
- * tBranchHandler.h
- *
- *  Created on: May 28, 2014
- *      Author: kiesej
- */
-
 #ifndef TBRANCHHANDLER_H_
 #define TBRANCHHANDLER_H_
+/** \class d_ana::tBranchHandlerBase
+ *
+ * base class for tBranchHandler framework
+ *
+ * \original author: Jan Kieseler
+ *
+ * more docu
+ *
+ */
+
 
 #include "TString.h"
 #include "TBranch.h"
@@ -51,6 +54,8 @@ protected:
 	const size_t buf_max_;
 	bool missingbranch_;
 };
+
+
 
 template<class T>
 class tBranchHandler;
@@ -112,9 +117,16 @@ void tBranchHandler_removeContents(tBranchHandler<T*>*b, T* &t){
 }
 }
 
-/**
- * This is just a small wrapper to make TBranch reading and access less ambiguous
- * and easier
+
+/** \class d_ana::tBranchHandler
+ *
+ * base class for tBranchHandler framework
+ * Safe and easy way to read TBranches
+ *
+ * \original author: Jan Kieseler
+ *
+ * more docu
+ *
  */
 template<class T>
 class tBranchHandler : public tBranchHandlerBase{
