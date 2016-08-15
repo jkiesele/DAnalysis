@@ -67,7 +67,7 @@ fileForker::fileforker_status fileForker::spawnChildsAndUpdate(){
 
 	size_t filenumber=inputfiles_.size();
 	//spawn
-	if(filenumber>1){
+	if(filenumber>0){
 		for(size_t i=0;i<filenumber;i++){
 			while(p_busystatus.get(i)->preadready())
 				busystatus_.at(i)=p_busystatus.get(i)->pread();
@@ -145,12 +145,7 @@ fileForker::fileforker_status fileForker::spawnChildsAndUpdate(){
 
 	}
 	else{ //only one process
-		std::cout << "fileForker::spawnChilds: only one process, running in main thread. No progress information will be available"  << std::endl;
-		ownchildindex_=0;
-		ischild_=false;
-		donechilds_++;
-		lastspawned_=1;
-		process();
+		std::cout << "fileForker::spawnChilds: no input file, nothing to do"  << std::endl;
 	}
 
 
