@@ -193,18 +193,48 @@ void basicAnalyzer::setOutDir(const TString& dir){
 		outdir_=dir+"/";
 }
 
+void basicAnalyzer::addPlot(TString name, TH1* histo, bool replace) {
+    // TODO: format name according to some ruleset 
+    TString formattedName=name;
+
+    if(histos_[formattedName] && !replace) 
+        histos_[formattedName]->Add(histo); 
+    else { 
+        histos_.erase(formattedName.Data());
+        histos_[formattedName]=histo;
+    }
+}
+
+void basicAnalyzer::rmvPlot(TString name) {
+    histos_.erase(name.Data());
+}
+
+void basicAnalyzer::rmvPlots(const TRegexp& nameExp) {
+    for(auto& it: histos_) {
+       if(it.first.Contains(nameExp)) histos_.erase(it.first.Data());
+    }
+}
+
 fileForker::fileforker_status basicAnalyzer::writeOutput(){
 	if(debug)
 		std::cout << "basicAnalyzer::writeHistos" <<std::endl;
 
 	//TBI FIXME replace by actual output with naming scheme
 	std::cout << "(needs implementation): writing histos for child " <<ownChildIndex() <<
-			" \ninputfile: " <<inputfile_ <<
-			" \nlegendname: " <<legendname_ <<
-			" \ncol: " <<col_ <<
-			" \nlegorder: " <<legorder_ <<
-			" \ncommon output path: "<< getOutPath()<< std::endl;
+			"\n\tinputfile: "          << inputfile_   <<
+			"\n\tlegendname: "         << legendname_  <<
+			"\n\tcol: "                << col_         <<
+			"\n\tlegorder: "           << legorder_    <<
+			"\n\tcommon output path: " << getOutPath() << std::endl;
 
+    TFile *outFile = new TFile(getOutPath(), "UPDATE");
+
+    for(auto& it: histos_) {
+        outFile.cd();
+        it.second->Write();
+    }
+
+    outFile.Close();
 
 			return ff_status_child_success;
 }
