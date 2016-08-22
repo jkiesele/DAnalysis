@@ -12,8 +12,15 @@
 
 
 #include "../interface/fileForker.h"
+#include "TFile.h"
+#include "TTree.h"
 #include "TString.h"
+#include "TH1.h"
+#include "TH1F.h"
+#include "TH1D.h"
+#include "TH1I.h"
 #include <vector>
+#include <map>
 
 
 /**
@@ -39,11 +46,14 @@ public:
 	TString getOutPath(){return outdir_+getOutFileName();}
 
     //adders
-    void addPlot(TString name,TH1* histo, bool replace=false);
+    TH1* addPlot(TString name,TH1* histo, bool replace=false);
+    TBranch* addBranch(TString name, TString type, Long_t address=0);
     
     //removers
     void rmvPlot(TString name);
     void rmvPlots(const TRegexp& nameExp);
+    void rmvBranch(TString name);
+    void rmvBranches(const TRegexp& nameExp);
 
 	//setters
 	void setLumi(double Lumi){lumi_=Lumi;}
@@ -57,6 +67,10 @@ public:
 	//getters
 	TString getSyst(){return syst_;}
 
+    //fillers
+    void fillTree();
+    void fillPlot(TString name, Double_t value, Double_t weight=1);
+    void fillPlots(const TRegexp& nameExp, Double_t value, Double_t weight=1);
 
 	virtual TString getOutFileName(){
 		if(syst_.Length()){
@@ -101,7 +115,7 @@ private:
 
 
 
-	fileForker::fileforker_status  writeOutput();
+	fileForker::fileforker_status  writeOutput(Bool_t recreate = false, Bool_t writeTree = false);
 	fileForker::fileforker_status  runParallels(int displaystatusinterval);
 
 	bool createOutFile()const;
@@ -115,7 +129,9 @@ private:
 	std::vector<size_t> legords_;
 	std::vector<bool> issignal_;
 	std::vector<TString> extraopts_;
-    std::map<TString,TH1F*> histos_;
+    std::map<TString,TH1*> histos_;
+
+    TTree *ntuples_;
 
 	///child variables
 	TString inputfile_;

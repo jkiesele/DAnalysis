@@ -25,7 +25,7 @@ basicAnalyzer::basicAnalyzer():fileForker(),
 		datalegend_("data")
 {
 
-
+    ntuples_ = new TTree();
 }
 
 void basicAnalyzer::process(){
@@ -193,7 +193,12 @@ void basicAnalyzer::setOutDir(const TString& dir){
 		outdir_=dir+"/";
 }
 
-void basicAnalyzer::addPlot(TString name, TH1* histo, bool replace) {
+TH1* basicAnalyzer::addPlot(TString name, TH1* histo, bool replace) {
+    if(histo==0) {
+        std::cout << "WARNING (basicAnalyzer::addPlot): input histogram '" 
+                  << name << "' is a null pointer." << std::endl;
+    }
+
     // TODO: format name according to some ruleset 
     TString formattedName=name;
 
@@ -202,6 +207,22 @@ void basicAnalyzer::addPlot(TString name, TH1* histo, bool replace) {
     else { 
         histos_.erase(formattedName.Data());
         histos_[formattedName]=histo;
+    }
+
+    return histo;
+}
+
+TBranch* basicAnalyzer::addBranch(TString name, TString type, Long_t address) {
+    // TODO: format name according to some ruleset 
+    TString formattedName=name;
+    TString formattedType=formattedName + "/" + type;
+
+    if(address != 0) {
+        return (TBranch*) ntuples_->Branch(formattedName,address,formattedType); 
+    } else {
+        std::cout << "ERROR (basicAnalyzer::addBranch): Null address while adding branch " 
+                  << name << std::endl;
+        return 0;
     }
 }
 
@@ -215,7 +236,54 @@ void basicAnalyzer::rmvPlots(const TRegexp& nameExp) {
     }
 }
 
-fileForker::fileforker_status basicAnalyzer::writeOutput(){
+void basicAnalyzer::rmvBranch(TString name) {
+    ntuples_->DropBranchFromCache(name);
+}
+
+void basicAnalyzer::rmvBranches(const TRegexp& nameExp) {
+    TObjArray *branchList = (TObjArray*) ntuples_->GetListOfBranches();
+
+    for(Int_t i=0; i < branchList->GetSize(); i++) {
+        TString name = TString(branchList->At(i)->GetName());
+        if(name.Contains(nameExp)) {
+            ntuples_->DropBranchFromCache(name);
+        }
+    }
+}
+
+void basicAnalyzer::fillTree() {
+	if(debug)
+		std::cout << "basicAnalyzer::fillTree" <<std::endl;
+
+    ntuples_->Fill();
+}
+
+void basicAnalyzer::fillPlot(TString name, Double_t value, Double_t weight) {
+	if(debug)
+		std::cout << "basicAnalyzer::fillPlot" <<std::endl;
+
+    if(histos_[name] == 0) {
+        std::cout << "ERROR (basicAnalyzer::fillPlot): histogram '" 
+                  << name << "' does not exist." << std::endl;
+    }
+
+    histos_[name]->Fill(value,weight);
+}
+
+void basicAnalyzer::fillPlots(const TRegexp& nameExp, Double_t value, Double_t weight) {
+	if(debug)
+		std::cout << "basicAnalyzer::fillPlots" <<std::endl;
+
+    for(auto& it : histos_) {
+        if(it.first.Contains(nameExp) && it.second != 0) {
+	        if(debug)
+		        std::cout << "basicAnalyzer::fillPlots || filling " << it.first << std::endl;
+            it.second->Fill(value,weight);
+        }
+    }
+}
+
+fileForker::fileforker_status basicAnalyzer::writeOutput(Bool_t recreate, Bool_t writeTree){
 	if(debug)
 		std::cout << "basicAnalyzer::writeHistos" <<std::endl;
 
@@ -227,14 +295,37 @@ fileForker::fileforker_status basicAnalyzer::writeOutput(){
 			"\n\tlegorder: "           << legorder_    <<
 			"\n\tcommon output path: " << getOutPath() << std::endl;
 
-    TFile *outFile = new TFile(getOutPath(), "UPDATE");
+    TString openSetting = recreate ? "RECREATE" : "UPDATE";
+    TFile *outFile = new TFile(getOutPath(), openSetting);
+	if(debug)
+	    std::cout << "basicAnalyzer::writeHistos || Opening TFile with setting " << openSetting << std::endl;
 
-    for(auto& it: histos_) {
-        outFile.cd();
-        it.second->Write();
+    try {
+    	if(debug)
+    	    std::cout << "basicAnalyzer::writeHistos || Writing histograms" <<std::endl;
+        for(auto& it: histos_) {
+            outFile->cd();
+            it.second->Write();
+        }
+    } catch(Int_t e) { 
+    	std::cout << "ERROR (basicAnalyzer::writeHistos): Problem while writing histograms to outfile" <<std::endl;
+        return ff_status_child_aborted;
     }
 
-    outFile.Close();
+
+    try {
+        if(writeTree) {
+	        if(debug)
+	    	    std::cout << "basicAnalyzer::writeHistos || Writing ntuples" <<std::endl;
+            outFile->cd();
+            ntuples_->Write();
+        }
+    } catch(Int_t e) {
+    	std::cout << "ERROR (basicAnalyzer::writeHistos): Problem while writing ntuples to outfile" <<std::endl;
+        return ff_status_child_aborted; 
+    }
+
+    outFile->Close();
 
 			return ff_status_child_success;
 }
