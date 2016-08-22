@@ -14,8 +14,12 @@
 #include "../interface/fileForker.h"
 #include "TString.h"
 #include <vector>
-
-
+#include <map>
+//includes to make the classes already available, even though not needed here
+#include "TH1D.h"
+#include "TH1F.h"
+#include "TH2F.h"
+#include "TH2D.h"
 /**
  * quick and dirty generic analysis interface
  */
@@ -23,31 +27,21 @@ namespace d_ana{
 class basicAnalyzer : public fileForker{
 public:
 	basicAnalyzer();
-
+	virtual ~basicAnalyzer();
 
 	void readFileList(const std::string& );
-
-
-
-
 
 	void setDataSetDirectory(const TString& dir){datasetdirectory_=dir;}
 
 	void setOutDir(const TString& dir);
-	TString getOutDir(){return outdir_;}
+	TString getOutDir()const{return outdir_;}
 
-	TString getOutPath(){return outdir_+getOutFileName();}
+	TString getOutPath()const{return outdir_+getOutFileName();}
 
-    //adders
-    void addPlot(TString name,TH1* histo, bool replace=false);
-    
-    //removers
-    void rmvPlot(TString name);
-    void rmvPlots(const TRegexp& nameExp);
 
 	//setters
 	void setLumi(double Lumi){lumi_=Lumi;}
-	void setSyst(TString syst){syst_=syst;}
+	void setSyst(const TString& syst){syst_=syst;}
 
 	void setFilePostfixReplace(const TString& file,const TString& pf,bool clear=false);
 	void setFilePostfixReplace(const std::vector<TString>& files,const std::vector<TString>& pf);
@@ -55,10 +49,10 @@ public:
 	void setTestMode(bool test){testmode_=test;}
 
 	//getters
-	TString getSyst(){return syst_;}
+	const TString& getSyst()const{return syst_;}
 
 
-	virtual TString getOutFileName(){
+	virtual TString getOutFileName()const{
 		if(syst_.Length()){
 			//   std::cout<<"Hallo   "<<getOutputFileName()<<std::endl;
 			return  (TString)getOutputFileName()+"_"+syst_;}
@@ -84,6 +78,15 @@ protected:
 	 */
 	void reportStatus(const Long64_t& entry,const Long64_t& nEntries);
 
+
+
+    //adders
+	TH1* addPlot(TH1* histo, bool replace=false);
+
+    //removers
+    void rmvPlot(const TString& name);
+    void rmvPlots(const TRegexp& nameExp);
+
 	const TString& getSampleFile()const{return inputfile_;}
 	TString getSamplePath()const{return datasetdirectory_+"/"+inputfile_;}
 	const TString& getLegendName()const{return legendname_;}
@@ -106,6 +109,7 @@ private:
 
 	bool createOutFile()const;
 
+
 	TString replaceExtension(TString filename );
 
 
@@ -115,7 +119,7 @@ private:
 	std::vector<size_t> legords_;
 	std::vector<bool> issignal_;
 	std::vector<TString> extraopts_;
-    std::map<TString,TH1F*> histos_;
+    std::map<TString,TH1*> histos_;
 
 	///child variables
 	TString inputfile_;

@@ -12,6 +12,7 @@
 #include "../interface/tBranchHandler.h"
 #include "../interface/dBranchHandler.h"
 
+
 /*
  *
  * In reality there should be Delphes class includes
@@ -63,6 +64,8 @@ private:
 		d_ana::dBranchHandler<Electron> elecs(&tree,"Electron");
 
 
+		TH1* histo=addPlot(new TH1D("histoname1","histotitle1",100,0,100),false);
+
 		std::cout << "event loop on " << getSampleFile()  <<std::endl;
 
 		size_t nevents=1000;
@@ -75,8 +78,7 @@ private:
 
 			//std::cout << elecs.size() <<std::endl;
 			if(elecs.size()>0)
-				std::cout << elecs.at(0)->PT <<std::endl;
-
+				histo->Fill(elecs.at(0)->PT);
 			reportStatus(i,nevents);
 			//usleep(4e4);
 
@@ -95,7 +97,7 @@ int main(){
 
 	exampleanalyser ana;
 
-
+	ana.setOutputFileName("testout.root");
 	ana.setDataSetDirectory("/afs/cern.ch/user/j/jkiesele/eos/cms/store/group/upgrade/delphes_framework/");
 	//adjust to what is needed. should aso be read in from file when we are done with testing
 

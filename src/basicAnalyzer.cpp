@@ -8,6 +8,12 @@
 
 #include "../interface/basicAnalyzer.h"
 #include "../interface/fileReader.h"
+#include "TH1.h"
+#include "TFile.h"
+
+#include "../interface/metaInfo.h"
+
+
 
 namespace d_ana{
 
@@ -23,8 +29,14 @@ basicAnalyzer::basicAnalyzer():fileForker(),
 		testmode_(false),
 		isMC_(true),
 		datalegend_("data")
-{
+{}
 
+basicAnalyzer::~basicAnalyzer(){
+	for(auto& it: histos_) {
+		if(it.second)
+			delete it.second;
+	}
+	histos_.clear();
 
 }
 
@@ -35,6 +47,7 @@ void basicAnalyzer::process(){
 	col_=colz_.at(anaid);
 	legorder_=legords_.at(anaid);
 	signal_=issignal_.at(anaid);
+	norm_=norms_.at(anaid);
 	isMC_ = legendname_ != datalegend_;
 	analyze(anaid);
 }
@@ -193,50 +206,88 @@ void basicAnalyzer::setOutDir(const TString& dir){
 		outdir_=dir+"/";
 }
 
-void basicAnalyzer::addPlot(TString name, TH1* histo, bool replace) {
-    // TODO: format name according to some ruleset 
-    TString formattedName=name;
-
-    if(histos_[formattedName] && !replace) 
-        histos_[formattedName]->Add(histo); 
-    else { 
-        histos_.erase(formattedName.Data());
-        histos_[formattedName]=histo;
-    }
+TH1* basicAnalyzer::addPlot(TH1* histo, bool replace) {
+	// TODO: format name according to some ruleset
+	TString formattedName=histo->GetName();
+	histo->Sumw2();
+	if(histos_[formattedName] && !replace)
+		histos_[formattedName]->Add(histo);
+	else {
+		histos_.erase(formattedName.Data()); //Jan: mem leak?
+		histos_[formattedName]=histo;
+	}
+	return histo;
 }
 
-void basicAnalyzer::rmvPlot(TString name) {
-    histos_.erase(name.Data());
+void basicAnalyzer::rmvPlot(const TString& name) {
+	histos_.erase(name.Data());
 }
 
 void basicAnalyzer::rmvPlots(const TRegexp& nameExp) {
-    for(auto& it: histos_) {
-       if(it.first.Contains(nameExp)) histos_.erase(it.first.Data());
-    }
+	for(auto& it: histos_) {
+		if(it.first.Contains(nameExp)) histos_.erase(it.first.Data());
+	}
 }
 
 fileForker::fileforker_status basicAnalyzer::writeOutput(){
 	if(debug)
-		std::cout << "basicAnalyzer::writeHistos" <<std::endl;
+		std::cout << "basicAnalyzer::writeHistos: " <<legendname_ <<std::endl;
 
-	//TBI FIXME replace by actual output with naming scheme
-	std::cout << "(needs implementation): writing histos for child " <<ownChildIndex() <<
-			"\n\tinputfile: "          << inputfile_   <<
-			"\n\tlegendname: "         << legendname_  <<
-			"\n\tcol: "                << col_         <<
-			"\n\tlegorder: "           << legorder_    <<
-			"\n\tcommon output path: " << getOutPath() << std::endl;
+	TFile *outFile = new TFile(getOutPath(), "UPDATE");
 
-    TFile *outFile = new TFile(getOutPath(), "UPDATE");
+	TString tdirname=textFormatter::makeCompatibleFileName(legendname_.Data());
+	tdirname="d_"+tdirname; //necessary otherwise problems with name "signal" in interactive root sessions
 
-    for(auto& it: histos_) {
-        outFile.cd();
-        it.second->Write();
-    }
 
-    outFile.Close();
+	bool exists=outFile->cd(tdirname);
 
-			return ff_status_child_success;
+	if(!exists){
+		outFile->mkdir(tdirname);
+		outFile->cd(tdirname);
+	}
+
+
+	//write meta info
+	metaInfo meta;
+	meta.legendname=legendname_;
+	meta.color=col_;
+	meta.norm=norm_;
+	meta.legendorder=legorder_;
+	if(!exists)
+		meta.Write();
+
+
+	//here one would also write the ntuple
+	for(auto& it: histos_) {
+		//it.second->SetName( it.second->GetName() );
+		it.second->Scale(norm_);
+
+
+		if(!exists)
+			it.second->Write();
+		else{
+
+			/*
+			 * add to corresponding existing histogram TBI FIXME
+			 */
+
+		}
+	}
+	/*
+	 * nor write the ntuple (if any)
+	 * keep in mind: there will be a problem with the norms if they
+	 * have the same legend name.... !
+	 */
+
+
+	outFile->Close();
+
+	//clean-up
+
+	delete outFile;
+
+
+	return ff_status_child_success;
 }
 
 
@@ -268,6 +319,9 @@ void basicAnalyzer::setFilePostfixReplace(const std::vector<TString>& files,cons
 bool basicAnalyzer::createOutFile()const{
 	if(outdir_.Length())
 		system(("mkdir -p "+outdir_).Data());
+	TFile f(getOutPath(),"RECREATE");
 	return true;
 }
+
+
 }
