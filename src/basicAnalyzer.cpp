@@ -29,11 +29,9 @@ basicAnalyzer::basicAnalyzer():fileForker(),
 		testmode_(false),
 		isMC_(true),
 		datalegend_("data")
-{}
+{
+}
 
-<<<<<<< HEAD
-    ntuples_ = new TTree();
-=======
 basicAnalyzer::~basicAnalyzer(){
 	for(auto& it: histos_) {
 		if(it.second)
@@ -41,7 +39,7 @@ basicAnalyzer::~basicAnalyzer(){
 	}
 	histos_.clear();
 
->>>>>>> f7cc3f5817d066c414ebc1c25925994f6508fe44
+    delete ntuples_;
 }
 
 void basicAnalyzer::process(){
@@ -55,7 +53,6 @@ void basicAnalyzer::process(){
 	isMC_ = legendname_ != datalegend_;
 	analyze(anaid);
 }
-
 
 void basicAnalyzer::readFileList(const std::string& inputfile){
 	if(debug)
@@ -210,7 +207,7 @@ void basicAnalyzer::setOutDir(const TString& dir){
 		outdir_=dir+"/";
 }
 
-<<<<<<< HEAD
+
 TH1* basicAnalyzer::addPlot(TString name, TH1* histo, bool replace) {
     if(histo==0) {
         std::cout << "WARNING (basicAnalyzer::addPlot): input histogram '" 
@@ -230,19 +227,6 @@ TH1* basicAnalyzer::addPlot(TString name, TH1* histo, bool replace) {
     return histo;
 }
 
-TBranch* basicAnalyzer::addBranch(TString name, TString type, Long_t address) {
-    // TODO: format name according to some ruleset 
-    TString formattedName=name;
-    TString formattedType=formattedName + "/" + type;
-
-    if(address != 0) {
-        return (TBranch*) ntuples_->Branch(formattedName,address,formattedType); 
-    } else {
-        std::cout << "ERROR (basicAnalyzer::addBranch): Null address while adding branch " 
-                  << name << std::endl;
-        return 0;
-    }
-=======
 TH1* basicAnalyzer::addPlot(TH1* histo, bool replace) {
 	// TODO: format name according to some ruleset
 	TString formattedName=histo->GetName();
@@ -254,7 +238,21 @@ TH1* basicAnalyzer::addPlot(TH1* histo, bool replace) {
 		histos_[formattedName]=histo;
 	}
 	return histo;
->>>>>>> f7cc3f5817d066c414ebc1c25925994f6508fe44
+}
+
+TBranch* basicAnalyzer::addBranch(const TString& name, const TString& type, Long_t address) {
+    // TODO: format name according to some ruleset 
+    TString formattedName=name;
+    TString formattedType=formattedName + "/" + type;
+
+    if(address != 0) {
+        if(ntuples_ == 0) ntuples_ = new TTree("DAnalysis"); 
+        return (TBranch*) ntuples_->Branch(formattedName,address,formattedType); 
+    } else {
+        std::cout << "ERROR (basicAnalyzer::addBranch): Null address while adding branch " 
+                  << name << std::endl;
+        return 0;
+    }
 }
 
 void basicAnalyzer::rmvPlot(const TString& name) {
@@ -295,7 +293,7 @@ void basicAnalyzer::fillPlot(TString name, Double_t value, Double_t weight) {
 
     if(histos_[name] == 0) {
         std::cout << "ERROR (basicAnalyzer::fillPlot): histogram '" 
-                  << name << "' does not exist." << std::endl;
+                  << name << "' does not exist. Continuing..." << std::endl;
     }
 
     histos_[name]->Fill(value,weight);
@@ -316,45 +314,59 @@ void basicAnalyzer::fillPlots(const TRegexp& nameExp, Double_t value, Double_t w
 
 fileForker::fileforker_status basicAnalyzer::writeOutput(Bool_t recreate, Bool_t writeTree){
 	if(debug)
-		std::cout << "basicAnalyzer::writeHistos: " <<legendname_ <<std::endl;
+		std::cout << "basicAnalyzer::writeHistos: " << legendname_ <<std::endl;
 
-	TFile *outFile = new TFile(getOutPath(), "UPDATE");
-
-	TString tdirname=textFormatter::makeCompatibleFileName(legendname_.Data());
+    // get the directory name to write to	
+    TString tdirname=textFormatter::makeCompatibleFileName(legendname_.Data());
 	tdirname="d_"+tdirname; //necessary otherwise problems with name "signal" in interactive root sessions
-
-
-	bool exists=outFile->cd(tdirname);
-
+	
+    // do we want to recreate the output file?
+    TString openSetting = recreate ? "RECREATE" : "UPDATE";
+    TFile *outFile = new TFile(getOutPath(), openSetting);
+	if(debug)
+	    std::cout << "basicAnalyzer::writeHistos || Opening TFile with setting " << openSetting << std::endl;
+    
+    bool exists=outFile->cd(tdirname);
 	if(!exists){
 		outFile->mkdir(tdirname);
 		outFile->cd(tdirname);
 	}
 
-
-<<<<<<< HEAD
-    TString openSetting = recreate ? "RECREATE" : "UPDATE";
-    TFile *outFile = new TFile(getOutPath(), openSetting);
-	if(debug)
-	    std::cout << "basicAnalyzer::writeHistos || Opening TFile with setting " << openSetting << std::endl;
-
+    /*
+     * Try to write histograms 
+     */
     try {
     	if(debug)
     	    std::cout << "basicAnalyzer::writeHistos || Writing histograms" <<std::endl;
         for(auto& it: histos_) {
             outFile->cd();
-            it.second->Write();
+		    if(!exists)
+		    	it.second->Write();
+		    else {
+
+		    	/*
+		    	 * add to corresponding existing histogram TBI FIXME
+		    	 */
+
+		    }
         }
     } catch(Int_t e) { 
     	std::cout << "ERROR (basicAnalyzer::writeHistos): Problem while writing histograms to outfile" <<std::endl;
         return ff_status_child_aborted;
     }
 
-
+    /*
+     * Try to write ntuples
+     */
     try {
         if(writeTree) {
 	        if(debug)
 	    	    std::cout << "basicAnalyzer::writeHistos || Writing ntuples" <<std::endl;
+	/*
+	 * now write the ntuple (if any)
+	 * keep in mind: there will be a problem with the norms if they
+	 * have the same legend name.... !
+	 */
             outFile->cd();
             ntuples_->Write();
         }
@@ -363,9 +375,8 @@ fileForker::fileforker_status basicAnalyzer::writeOutput(Bool_t recreate, Bool_t
         return ff_status_child_aborted; 
     }
 
-    outFile->Close();
-=======
-	//write meta info
+
+    // write meta info
 	metaInfo meta;
 	meta.legendname=legendname_;
 	meta.color=col_;
@@ -375,34 +386,8 @@ fileForker::fileforker_status basicAnalyzer::writeOutput(Bool_t recreate, Bool_t
 		meta.Write();
 
 
-	//here one would also write the ntuple
-	for(auto& it: histos_) {
-		//it.second->SetName( it.second->GetName() );
-		it.second->Scale(norm_);
->>>>>>> f7cc3f5817d066c414ebc1c25925994f6508fe44
-
-
-		if(!exists)
-			it.second->Write();
-		else{
-
-			/*
-			 * add to corresponding existing histogram TBI FIXME
-			 */
-
-		}
-	}
-	/*
-	 * nor write the ntuple (if any)
-	 * keep in mind: there will be a problem with the norms if they
-	 * have the same legend name.... !
-	 */
-
-
+	// clean-up
 	outFile->Close();
-
-	//clean-up
-
 	delete outFile;
 
 
