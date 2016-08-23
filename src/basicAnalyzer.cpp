@@ -30,6 +30,8 @@ basicAnalyzer::basicAnalyzer():fileForker(),
 		isMC_(true),
 		datalegend_("data")
 {
+    ntuplefile_=0;
+    ntuples_=0;
 }
 
 basicAnalyzer::~basicAnalyzer(){
@@ -39,6 +41,11 @@ basicAnalyzer::~basicAnalyzer(){
 	}
 	histos_.clear();
 
+    if(ntuplefile_) {
+        ntuplefile_->Close();
+    }
+
+    delete ntuplefile_;
     delete ntuples_;
 }
 
@@ -208,123 +215,77 @@ void basicAnalyzer::setOutDir(const TString& dir){
 }
 
 
-TH1* basicAnalyzer::addPlot(TString name, TH1* histo, bool replace) {
+TH1* basicAnalyzer::addPlot(TH1* histo) {
+	if(debug)
+		std::cout << "basicAnalyzer::addPlot: " << legendname_ <<std::endl;
+
     if(histo==0) {
-        std::cout << "WARNING (basicAnalyzer::addPlot): input histogram '" 
-                  << name << "' is a null pointer." << std::endl;
+        std::cout << "WARNING (basicAnalyzer::addPlot): input histogram is a null pointer. Exiting..." << std::endl;
+        exit(EXIT_FAILURE);
     }
 
-    // TODO: format name according to some ruleset 
-    TString formattedName=name;
-
-    if(histos_[formattedName] && !replace) 
-        histos_[formattedName]->Add(histo); 
-    else { 
-        histos_.erase(formattedName.Data());
-        histos_[formattedName]=histo;
-    }
-
-    return histo;
-}
-
-TH1* basicAnalyzer::addPlot(TH1* histo, bool replace) {
 	// TODO: format name according to some ruleset
 	TString formattedName=histo->GetName();
 	histo->Sumw2();
-	if(histos_[formattedName] && !replace)
+    histo->SetName(formattedName);
+
+	if(histos_[formattedName]) {
+		std::cout << "WARNING (basicAnalyzer::addPlot): histo " 
+                  << histo->GetName() << " already exists. Adding..." <<std::endl;
 		histos_[formattedName]->Add(histo);
-	else {
-		histos_.erase(formattedName.Data()); //Jan: mem leak?
+    }
+	else 
 		histos_[formattedName]=histo;
-	}
+	
 	return histo;
 }
 
-TBranch* basicAnalyzer::addBranch(const TString& name, const TString& type, Long_t address) {
+TTree* basicAnalyzer::addTree(const TString& name) {
+	if(debug)
+		std::cout << "basicAnalyzer::addTree: " << legendname_ <<std::endl;
+
     // TODO: format name according to some ruleset 
-    TString formattedName=name;
-    TString formattedType=formattedName + "/" + type;
+    TString formattedName=textFormatter::makeCompatibleFileName(name.Data());
+    TString tdirname=textFormatter::makeCompatibleFileName(legendname_.Data());
+            tdirname="d_"+tdirname;
 
-    if(address != 0) {
-        if(ntuples_ == 0) ntuples_ = new TTree("DAnalysis"); 
-        return (TBranch*) ntuples_->Branch(formattedName,address,formattedType); 
-    } else {
-        std::cout << "ERROR (basicAnalyzer::addBranch): Null address while adding branch " 
-                  << name << std::endl;
-        return 0;
-    }
-}
-
-void basicAnalyzer::rmvPlot(const TString& name) {
-	histos_.erase(name.Data());
-}
-
-void basicAnalyzer::rmvPlots(const TRegexp& nameExp) {
-	for(auto& it: histos_) {
-		if(it.first.Contains(nameExp)) histos_.erase(it.first.Data());
-	}
-}
-
-void basicAnalyzer::rmvBranch(TString name) {
-    ntuples_->DropBranchFromCache(name);
-}
-
-void basicAnalyzer::rmvBranches(const TRegexp& nameExp) {
-    TObjArray *branchList = (TObjArray*) ntuples_->GetListOfBranches();
-
-    for(Int_t i=0; i < branchList->GetSize(); i++) {
-        TString name = TString(branchList->At(i)->GetName());
-        if(name.Contains(nameExp)) {
-            ntuples_->DropBranchFromCache(name);
-        }
-    }
-}
-
-void basicAnalyzer::fillTree() {
-	if(debug)
-		std::cout << "basicAnalyzer::fillTree" <<std::endl;
-
-    ntuples_->Fill();
-}
-
-void basicAnalyzer::fillPlot(TString name, Double_t value, Double_t weight) {
-	if(debug)
-		std::cout << "basicAnalyzer::fillPlot" <<std::endl;
-
-    if(histos_[name] == 0) {
-        std::cout << "ERROR (basicAnalyzer::fillPlot): histogram '" 
-                  << name << "' does not exist. Continuing..." << std::endl;
+    if(!ntuplefile_) {
+        ntuplefile_ = new TFile(tdirname+"_"+getTreePath(),"RECREATE");
+    
+        bool exists=ntuplefile_->cd(tdirname);
+	    if(!exists){
+	    	ntuplefile_->mkdir(tdirname);
+	    	ntuplefile_->cd(tdirname);
+    
+            // write meta info
+	        metaInfo meta;
+	        meta.legendname=legendname_;
+	        meta.color=col_;
+	        meta.norm=norm_;
+	        meta.legendorder=legorder_;
+            meta.Write();
+	    }
     }
 
-    histos_[name]->Fill(value,weight);
+    ntuplefile_->cd();
+    if(ntuples_ == 0) ntuples_ = new TTree(formattedName,formattedName); 
+
+    return ntuples_;
 }
 
-void basicAnalyzer::fillPlots(const TRegexp& nameExp, Double_t value, Double_t weight) {
-	if(debug)
-		std::cout << "basicAnalyzer::fillPlots" <<std::endl;
 
-    for(auto& it : histos_) {
-        if(it.first.Contains(nameExp) && it.second != 0) {
-	        if(debug)
-		        std::cout << "basicAnalyzer::fillPlots || filling " << it.first << std::endl;
-            it.second->Fill(value,weight);
-        }
-    }
-}
-
-fileForker::fileforker_status basicAnalyzer::writeOutput(Bool_t recreate, Bool_t writeTree){
+fileForker::fileforker_status basicAnalyzer::writeOutput(){
 	if(debug)
-		std::cout << "basicAnalyzer::writeHistos: " << legendname_ <<std::endl;
+		std::cout << "basicAnalyzer::writeOutput: " << legendname_ <<std::endl;
 
     // get the directory name to write to	
     TString tdirname=textFormatter::makeCompatibleFileName(legendname_.Data());
 	tdirname="d_"+tdirname; //necessary otherwise problems with name "signal" in interactive root sessions
 	
     // do we want to recreate the output file?
-    TString openSetting = recreate ? "RECREATE" : "UPDATE";
-    TFile *outFile = new TFile(getOutPath(), openSetting);
+    TFile * outFile = new TFile(getOutPath(), "UPDATE");
 	if(debug)
-	    std::cout << "basicAnalyzer::writeHistos || Opening TFile with setting " << openSetting << std::endl;
+	    std::cout << "basicAnalyzer::writeOutput || Opening TFile with setting UPDATE" << std::endl;
     
     bool exists=outFile->cd(tdirname);
 	if(!exists){
@@ -337,21 +298,27 @@ fileForker::fileforker_status basicAnalyzer::writeOutput(Bool_t recreate, Bool_t
      */
     try {
     	if(debug)
-    	    std::cout << "basicAnalyzer::writeHistos || Writing histograms" <<std::endl;
+    	    std::cout << "basicAnalyzer::writeOutput || Writing histograms" <<std::endl;
         for(auto& it: histos_) {
-            outFile->cd();
+            outFile->cd(tdirname);
 		    if(!exists)
 		    	it.second->Write();
 		    else {
-
-		    	/*
-		    	 * add to corresponding existing histogram TBI FIXME
-		    	 */
-
+                TH1* thisto = (TH1*) outFile->Get(tdirname+"/"+it.second->GetName());
+            
+                // if the histo exists in the output, add and replace
+                // TODO: Normalizations?
+                if(thisto!=0) {
+                    it.second->Add((TH1*) thisto->Clone());
+                    outFile->Delete(tdirname+"/"+it.second->GetName()+";*");
+                }
+                    
+                it.second->Write();
+                delete thisto;
 		    }
         }
     } catch(Int_t e) { 
-    	std::cout << "ERROR (basicAnalyzer::writeHistos): Problem while writing histograms to outfile" <<std::endl;
+    	std::cout << "ERROR (basicAnalyzer::writeOutput): Problem while writing histograms to outfile" << std::endl;
         return ff_status_child_aborted;
     }
 
@@ -359,16 +326,22 @@ fileForker::fileforker_status basicAnalyzer::writeOutput(Bool_t recreate, Bool_t
      * Try to write ntuples
      */
     try {
-        if(writeTree) {
+        if(writeTree_ && ntuplefile_ && ntuples_) {
 	        if(debug)
-	    	    std::cout << "basicAnalyzer::writeHistos || Writing ntuples" <<std::endl;
-	/*
-	 * now write the ntuple (if any)
-	 * keep in mind: there will be a problem with the norms if they
-	 * have the same legend name.... !
-	 */
-            outFile->cd();
+	    	    std::cout << "basicAnalyzer::writeOutput || Writing ntuples" <<std::endl;
+	        /*
+	         * now write the ntuple (if any)
+	         * keep in mind: there will be a problem with the norms if they
+	         * have the same legend name.... !
+             *
+             * TODO Create naming scheme for TTrees + merge ntuples_ with any
+             *      existing trees
+	         */
+            
+            ntuplefile_->cd(tdirname);
             ntuples_->Write();
+            ntuplefile_->Close();
+            delete ntuplefile_;
         }
     } catch(Int_t e) {
     	std::cout << "ERROR (basicAnalyzer::writeHistos): Problem while writing ntuples to outfile" <<std::endl;
@@ -377,6 +350,7 @@ fileForker::fileforker_status basicAnalyzer::writeOutput(Bool_t recreate, Bool_t
 
 
     // write meta info
+    outFile->cd(tdirname);
 	metaInfo meta;
 	meta.legendname=legendname_;
 	meta.color=col_;
@@ -388,7 +362,7 @@ fileForker::fileforker_status basicAnalyzer::writeOutput(Bool_t recreate, Bool_t
 
 	// clean-up
 	outFile->Close();
-	delete outFile;
+    delete outFile;
 
 
 	return ff_status_child_success;

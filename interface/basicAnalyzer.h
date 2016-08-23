@@ -12,6 +12,7 @@
 
 
 #include "../interface/fileForker.h"
+#include "../interface/textFormatter.h"
 #include "TFile.h"
 #include "TTree.h"
 #include "TString.h"
@@ -36,9 +37,12 @@ public:
 	void setDataSetDirectory(const TString& dir){datasetdirectory_=dir;}
 
 	void setOutDir(const TString& dir);
-	TString getOutDir(){return outdir_;}
+	TString getOutDir()const{return outdir_;}
 
-	TString getOutPath(){return outdir_+getOutFileName();}
+	TString getOutPath()const{return outdir_+getOutFileName();}
+	TString getTreePath()const{
+        return TString(textFormatter::stripFileExtension(getOutFileName().Data()))+"_ntuples.root";
+    }
 
 
 	//setters
@@ -49,21 +53,17 @@ public:
 	void setFilePostfixReplace(const std::vector<TString>& files,const std::vector<TString>& pf);
 
 	void setTestMode(bool test){testmode_=test;}
+    
+    void setWriteTree(bool write=true){writeTree_=write;}
 
 	//getters
 	const TString& getSyst()const{return syst_;}
 
-    //fillers
-    void fillTree();
-    void fillPlot(TString name, Double_t value, Double_t weight=1);
-    void fillPlots(const TRegexp& nameExp, Double_t value, Double_t weight=1);
 
 	virtual TString getOutFileName()const{
 		if(syst_.Length()){
-			//   std::cout<<"Hallo   "<<getOutputFileName()<<std::endl;
 			return  (TString)getOutputFileName()+"_"+syst_;}
 		else{
-			//    std::cout<<"Hallo2   "<<getOutputFileName()<<std::endl;
 			return getOutputFileName();}
 	}
 
@@ -87,11 +87,8 @@ protected:
 
 
     //adders
-	TH1* addPlot(TH1* histo, bool replace=false);
-
-    //removers
-    void rmvPlot(const TString& name);
-    void rmvPlots(const TRegexp& nameExp);
+	TH1* addPlot(TH1* histo);
+	TTree* addTree(const TString& name="DAnalysis");
 
 	const TString& getSampleFile()const{return inputfile_;}
 	TString getSamplePath()const{return datasetdirectory_+"/"+inputfile_;}
@@ -110,7 +107,7 @@ private:
 
 
 
-	fileForker::fileforker_status  writeOutput(Bool_t recreate = false, Bool_t writeTree = false);
+	fileForker::fileforker_status  writeOutput();
 	fileForker::fileforker_status  runParallels(int displaystatusinterval);
 
 	bool createOutFile()const;
@@ -126,6 +123,10 @@ private:
 	std::vector<TString> extraopts_;
     std::map<TString,TH1*> histos_;
 
+    Bool_t rewriteoutfile_=true;
+    Bool_t rewritentuple_=true;
+    Bool_t writeTree_=true;
+    TFile *ntuplefile_;
     TTree *ntuples_;
 
 	///child variables
