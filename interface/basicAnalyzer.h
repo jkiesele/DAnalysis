@@ -15,14 +15,13 @@
 #include "TFile.h"
 #include "TTree.h"
 #include "TString.h"
-#include "TH1.h"
-#include "TH1F.h"
-#include "TH1D.h"
-#include "TH1I.h"
 #include <vector>
 #include <map>
-
-
+//includes to make the classes already available, even though not needed here
+#include "TH1D.h"
+#include "TH1F.h"
+#include "TH2F.h"
+#include "TH2D.h"
 /**
  * quick and dirty generic analysis interface
  */
@@ -30,13 +29,9 @@ namespace d_ana{
 class basicAnalyzer : public fileForker{
 public:
 	basicAnalyzer();
-
+	virtual ~basicAnalyzer();
 
 	void readFileList(const std::string& );
-
-
-
-
 
 	void setDataSetDirectory(const TString& dir){datasetdirectory_=dir;}
 
@@ -45,19 +40,10 @@ public:
 
 	TString getOutPath(){return outdir_+getOutFileName();}
 
-    //adders
-    TH1* addPlot(TString name,TH1* histo, bool replace=false);
-    TBranch* addBranch(TString name, TString type, Long_t address=0);
-    
-    //removers
-    void rmvPlot(TString name);
-    void rmvPlots(const TRegexp& nameExp);
-    void rmvBranch(TString name);
-    void rmvBranches(const TRegexp& nameExp);
 
 	//setters
 	void setLumi(double Lumi){lumi_=Lumi;}
-	void setSyst(TString syst){syst_=syst;}
+	void setSyst(const TString& syst){syst_=syst;}
 
 	void setFilePostfixReplace(const TString& file,const TString& pf,bool clear=false);
 	void setFilePostfixReplace(const std::vector<TString>& files,const std::vector<TString>& pf);
@@ -65,14 +51,14 @@ public:
 	void setTestMode(bool test){testmode_=test;}
 
 	//getters
-	TString getSyst(){return syst_;}
+	const TString& getSyst()const{return syst_;}
 
     //fillers
     void fillTree();
     void fillPlot(TString name, Double_t value, Double_t weight=1);
     void fillPlots(const TRegexp& nameExp, Double_t value, Double_t weight=1);
 
-	virtual TString getOutFileName(){
+	virtual TString getOutFileName()const{
 		if(syst_.Length()){
 			//   std::cout<<"Hallo   "<<getOutputFileName()<<std::endl;
 			return  (TString)getOutputFileName()+"_"+syst_;}
@@ -97,6 +83,15 @@ protected:
 	 * reports the Status (% of events already processed) to the main program
 	 */
 	void reportStatus(const Long64_t& entry,const Long64_t& nEntries);
+
+
+
+    //adders
+	TH1* addPlot(TH1* histo, bool replace=false);
+
+    //removers
+    void rmvPlot(const TString& name);
+    void rmvPlots(const TRegexp& nameExp);
 
 	const TString& getSampleFile()const{return inputfile_;}
 	TString getSamplePath()const{return datasetdirectory_+"/"+inputfile_;}
