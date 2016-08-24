@@ -16,6 +16,8 @@ libDAnalysis.so: $(OBJ_FILES)
 obj/%.o: src/%.cpp
 	g++ $(CC_FLAGS) -c -o $@ $<
 
+exe:
+	g++ -g -o stackPlotter.exe -Wall $(LD_FLAGS) -L$(DANALYSISPATH) -lDAnalysis obj/stackPlotter.o  
 
 clean: 
 	rm -f obj/*.o obj/*.d
