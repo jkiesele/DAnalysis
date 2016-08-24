@@ -61,11 +61,9 @@ private:
 		 *
 		 */
 
-        // Get the DELPHES handlers
-		d_ana::tTreeHandler tree(getSamplePath(),"Delphes");
-		d_ana::dBranchHandler<Electron> elecs(&tree,"Electron");
+		d_ana::dBranchHandler<Electron> elecs(tree(),"Electron");
 
-        debug=true;
+        //debug=true;
 
         // Add a histogram to the analysis
 		TH1* histo=addPlot(new TH1D("histoname1","histotitle1",100,0,100));
@@ -79,13 +77,13 @@ private:
 
 		std::cout << "event loop on " << getSampleFile()  <<std::endl;
 
-		size_t nevents=1000;
+		size_t nevents=tree()->entries() ;
 		if(isTestMode())
-			nevents=100;
+			nevents/=100;
 
 		for(size_t i=0;i<nevents;i++){
 
-			tree.setEntry(i); //associate event entry
+			tree()->setEntry(i); //associate event entry
 
 			//std::cout << elecs.size() <<std::endl;
 			if(elecs.size()>0) {
@@ -111,14 +109,8 @@ int main(){
 
 	exampleanalyser ana;
 
-	ana.setOutputFileName("testout.root");
-	ana.setDataSetDirectory("/afs/cern.ch/user/j/jkiesele/eos/cms/store/group/upgrade/delphes_framework/");
-	//adjust to what is needed. should aso be read in from file when we are done with testing
 
 	ana.readConfigFile("exampleinput.txt");
-	//	ana.setMaxChilds(1);
-
-	//ana.setTestMode(true);//or not
 
 	ana.start();
 

@@ -1,7 +1,21 @@
+[config-begin]
+
+    Outputdir  = outdir
+    Outputfile = testoutput.root
+    Lumi       = 3000
+    Testmode   = false
+    Maxchilds  = 6
+
+    Samplesdir = /afs/cern.ch/user/j/jkiesele/public
+
+[config-end]
+
 
 [inputfiles-begin]
 
 delphes_testsample.root  , signal,                633,	 1,          1, true
 delphes_testsample.root	 , background,                433,   2,          2
+delphes_testsample.root	 , background,                433,   4,          2
+delphes_testsample.root	 , background,                433,   40,          2
 
 [inputfiles-end]

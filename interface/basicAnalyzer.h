@@ -90,6 +90,7 @@ protected:
 	void reportStatus(const Long64_t& entry,const Long64_t& nEntries);
 
 
+	tTreeHandler* tree(){return tree_;}
 
     //adders
 	TH1* addPlot(TH1* histo);
@@ -106,10 +107,12 @@ protected:
 
 	bool isTestMode()const{return testmode_;}
 
+	void processEndFunction();
 private:
 
 	void process();
 
+	void adjustNormalization(const tTreeHandler*);
 
 
 	fileForker::fileforker_status  writeOutput();
@@ -154,6 +157,9 @@ private:
 
 	TString datalegend_;
 	TString outdir_;
+
+	TString treename_;
+	tTreeHandler* tree_;
 };
 
 

@@ -10,15 +10,11 @@
 
 void ANALYSER_TEMPL::analyze(size_t childid){
 
-	/*
-	 * Load the tree in the input file.
-	 */
-	d_ana::tTreeHandler tree(getSamplePath(),"Delphes");
 
 	/*
 	 * Define the branches that are to be considered for the analysis
 	 */
-	d_ana::dBranchHandler<Electron> elecs(&tree,"Electron");
+	d_ana::dBranchHandler<Electron> elecs(tree(),"Electron");
 
 
 	/*
@@ -28,14 +24,14 @@ void ANALYSER_TEMPL::analyze(size_t childid){
 	TH1* histo=addPlot(new TH1D("histoname1","histotitle1",100,0,100));
 
 
-	size_t nevents=tree.entries();
+	size_t nevents=tree()->entries();
 	for(size_t i=0;i<nevents;i++){
 		/*
 		 * The following lines report the status and set the entry
 		 * Do not remove!
 		 */
 		reportStatus(i,nevents);
-		tree.setEntry(i);
+		tree()->setEntry(i);
 
 
 		/*
