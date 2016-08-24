@@ -61,7 +61,7 @@ void basicAnalyzer::process(){
 	analyze(anaid);
 }
 
-void basicAnalyzer::readFileList(const std::string& inputfile){
+void basicAnalyzer::readConfigFile(const std::string& inputfile){
 	if(debug)
 		std::cout << "basicAnalyzer::readFileList" << std::endl;
 	using namespace d_ana;

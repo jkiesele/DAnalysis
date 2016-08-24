@@ -23,6 +23,11 @@
 #include "TH1F.h"
 #include "TH2F.h"
 #include "TH2D.h"
+#include "../interface/basicAnalyzer.h"
+#include "../interface/tTreeHandler.h"
+#include "../interface/tBranchHandler.h"
+#include "../interface/dBranchHandler.h"
+
 /**
  * quick and dirty generic analysis interface
  */
@@ -32,7 +37,7 @@ public:
 	basicAnalyzer();
 	virtual ~basicAnalyzer();
 
-	void readFileList(const std::string& );
+	void readConfigFile(const std::string& );
 
 	void setDataSetDirectory(const TString& dir){datasetdirectory_=dir;}
 

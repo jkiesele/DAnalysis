@@ -91,7 +91,7 @@ int main(){
 	ana.setDataSetDirectory("~/eos/cms/store/group/upgrade/delphes_framework");
 	//adjust to what is needed. should aso be read in from file when we are done with testing
 
-	ana.readFileList("exampleinput.txt");
+	ana.readConfigFile("exampleinput.txt");
 	//	ana.setMaxChilds(1);
 
 	//ana.setTestMode(true);//or not
