@@ -29,7 +29,10 @@ basicAnalyzer::basicAnalyzer():fileForker(),
 		testmode_(false),
 		isMC_(true),
 		datalegend_("data")
-{}
+{
+    ntuplefile_=0;
+    ntuples_=0;
+}
 
 basicAnalyzer::~basicAnalyzer(){
 	for(auto& it: histos_) {
@@ -38,6 +41,12 @@ basicAnalyzer::~basicAnalyzer(){
 	}
 	histos_.clear();
 
+    if(ntuplefile_) {
+        ntuplefile_->Close();
+    }
+
+    delete ntuplefile_;
+    delete ntuples_;
 }
 
 void basicAnalyzer::process(){
@@ -51,7 +60,6 @@ void basicAnalyzer::process(){
 	isMC_ = legendname_ != datalegend_;
 	analyze(anaid);
 }
-
 
 void basicAnalyzer::readFileList(const std::string& inputfile){
 	if(debug)
@@ -206,48 +214,143 @@ void basicAnalyzer::setOutDir(const TString& dir){
 		outdir_=dir+"/";
 }
 
-TH1* basicAnalyzer::addPlot(TH1* histo, bool replace) {
+
+TH1* basicAnalyzer::addPlot(TH1* histo) {
+	if(debug)
+		std::cout << "basicAnalyzer::addPlot: " << legendname_ <<std::endl;
+
+    if(histo==0) {
+        std::cout << "WARNING (basicAnalyzer::addPlot): input histogram is a null pointer. Exiting..." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
 	// TODO: format name according to some ruleset
 	TString formattedName=histo->GetName();
 	histo->Sumw2();
-	if(histos_[formattedName] && !replace)
+    histo->SetName(formattedName);
+
+	if(histos_[formattedName]) {
+		std::cout << "WARNING (basicAnalyzer::addPlot): histo " 
+                  << histo->GetName() << " already exists. Adding..." <<std::endl;
 		histos_[formattedName]->Add(histo);
-	else {
-		histos_.erase(formattedName.Data()); //Jan: mem leak?
+    }
+	else 
 		histos_[formattedName]=histo;
-	}
+	
 	return histo;
 }
 
-void basicAnalyzer::rmvPlot(const TString& name) {
-	histos_.erase(name.Data());
+TTree* basicAnalyzer::addTree(const TString& name) {
+	if(debug)
+		std::cout << "basicAnalyzer::addTree: " << legendname_ <<std::endl;
+
+    // TODO: format name according to some ruleset 
+    TString formattedName=textFormatter::makeCompatibleFileName(name.Data());
+    TString tdirname=textFormatter::makeCompatibleFileName(legendname_.Data());
+            tdirname="d_"+tdirname;
+
+    if(!ntuplefile_) {
+        ntuplefile_ = new TFile(tdirname+"_"+getTreePath(),"RECREATE");
+    
+        bool exists=ntuplefile_->cd(tdirname);
+	    if(!exists){
+	    	ntuplefile_->mkdir(tdirname);
+	    	ntuplefile_->cd(tdirname);
+    
+            // write meta info
+	        metaInfo meta;
+	        meta.legendname=legendname_;
+	        meta.color=col_;
+	        meta.norm=norm_;
+	        meta.legendorder=legorder_;
+            meta.Write();
+	    }
+    }
+
+    ntuplefile_->cd();
+    if(ntuples_ == 0) ntuples_ = new TTree(formattedName,formattedName); 
+
+    return ntuples_;
 }
 
-void basicAnalyzer::rmvPlots(const TRegexp& nameExp) {
-	for(auto& it: histos_) {
-		if(it.first.Contains(nameExp)) histos_.erase(it.first.Data());
-	}
-}
 
 fileForker::fileforker_status basicAnalyzer::writeOutput(){
 	if(debug)
-		std::cout << "basicAnalyzer::writeHistos: " <<legendname_ <<std::endl;
+		std::cout << "basicAnalyzer::writeOutput: " << legendname_ <<std::endl;
 
-	TFile *outFile = new TFile(getOutPath(), "UPDATE");
-
-	TString tdirname=textFormatter::makeCompatibleFileName(legendname_.Data());
+    // get the directory name to write to	
+    TString tdirname=textFormatter::makeCompatibleFileName(legendname_.Data());
 	tdirname="d_"+tdirname; //necessary otherwise problems with name "signal" in interactive root sessions
-
-
-	bool exists=outFile->cd(tdirname);
-
+	
+    // do we want to recreate the output file?
+    TFile * outFile = new TFile(getOutPath(), "UPDATE");
+	if(debug)
+	    std::cout << "basicAnalyzer::writeOutput || Opening TFile with setting UPDATE" << std::endl;
+    
+    bool exists=outFile->cd(tdirname);
 	if(!exists){
 		outFile->mkdir(tdirname);
 		outFile->cd(tdirname);
 	}
 
+    /*
+     * Try to write histograms 
+     */
+    try {
+    	if(debug)
+    	    std::cout << "basicAnalyzer::writeOutput || Writing histograms" <<std::endl;
+        for(auto& it: histos_) {
+            outFile->cd(tdirname);
+		    if(!exists)
+		    	it.second->Write();
+		    else {
+                TH1* thisto = (TH1*) outFile->Get(tdirname+"/"+it.second->GetName());
+            
+                // if the histo exists in the output, add and replace
+                // TODO: Normalizations?
+                if(thisto!=0) {
+                    it.second->Add((TH1*) thisto->Clone());
+                    outFile->Delete(tdirname+"/"+it.second->GetName()+";*");
+                }
+                    
+                it.second->Write();
+                delete thisto;
+		    }
+        }
+    } catch(Int_t e) { 
+    	std::cout << "ERROR (basicAnalyzer::writeOutput): Problem while writing histograms to outfile" << std::endl;
+        return ff_status_child_aborted;
+    }
 
-	//write meta info
+    /*
+     * Try to write ntuples
+     */
+    try {
+        if(writeTree_ && ntuplefile_ && ntuples_) {
+	        if(debug)
+	    	    std::cout << "basicAnalyzer::writeOutput || Writing ntuples" <<std::endl;
+	        /*
+	         * now write the ntuple (if any)
+	         * keep in mind: there will be a problem with the norms if they
+	         * have the same legend name.... !
+             *
+             * TODO Create naming scheme for TTrees + merge ntuples_ with any
+             *      existing trees
+	         */
+            
+            ntuplefile_->cd(tdirname);
+            ntuples_->Write();
+            ntuplefile_->Close();
+            delete ntuplefile_;
+        }
+    } catch(Int_t e) {
+    	std::cout << "ERROR (basicAnalyzer::writeHistos): Problem while writing ntuples to outfile" <<std::endl;
+        return ff_status_child_aborted; 
+    }
+
+
+    // write meta info
+    outFile->cd(tdirname);
 	metaInfo meta;
 	meta.legendname=legendname_;
 	meta.color=col_;
@@ -257,34 +360,9 @@ fileForker::fileforker_status basicAnalyzer::writeOutput(){
 		meta.Write();
 
 
-	//here one would also write the ntuple
-	for(auto& it: histos_) {
-		//it.second->SetName( it.second->GetName() );
-		it.second->Scale(norm_);
-
-
-		if(!exists)
-			it.second->Write();
-		else{
-
-			/*
-			 * add to corresponding existing histogram TBI FIXME
-			 */
-
-		}
-	}
-	/*
-	 * nor write the ntuple (if any)
-	 * keep in mind: there will be a problem with the norms if they
-	 * have the same legend name.... !
-	 */
-
-
+	// clean-up
 	outFile->Close();
-
-	//clean-up
-
-	delete outFile;
+    delete outFile;
 
 
 	return ff_status_child_success;

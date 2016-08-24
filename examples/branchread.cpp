@@ -60,11 +60,22 @@ private:
 		 * This function is thread-safe. The file access is blocked while one process writes.
 		 *
 		 */
+
+        // Get the DELPHES handlers
 		d_ana::tTreeHandler tree(getSamplePath(),"Delphes");
 		d_ana::dBranchHandler<Electron> elecs(&tree,"Electron");
 
+        debug=true;
 
-		TH1* histo=addPlot(new TH1D("histoname1","histotitle1",100,0,100),false);
+        // Add a histogram to the analysis
+		TH1* histo=addPlot(new TH1D("histoname1","histotitle1",100,0,100));
+
+        // Create tree in analysis (Default name is DAnalysis)
+        TTree* anatree=addTree();
+
+        // Add a branch to the tree
+        Double_t elecPt=0;
+        anatree->Branch("pte", &elecPt);
 
 		std::cout << "event loop on " << getSampleFile()  <<std::endl;
 
@@ -77,12 +88,15 @@ private:
 			tree.setEntry(i); //associate event entry
 
 			//std::cout << elecs.size() <<std::endl;
-			if(elecs.size()>0)
+			if(elecs.size()>0) {
 				histo->Fill(elecs.at(0)->PT);
+                elecPt=elecs.at(0)->PT;   
+            }
 			reportStatus(i,nevents);
 			//usleep(4e4);
 
 			//	size_t njets=jets.content()->size(); //how to access the branch content
+            anatree->Fill();
 		}
 
 		processEndFunction(); //needs to be called
