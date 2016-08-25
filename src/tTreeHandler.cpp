@@ -33,20 +33,17 @@ tTreeHandler::~tTreeHandler(){
 
 void tTreeHandler::load(const TString & filename, const TString &treename){
 	clear();
-	std::ifstream FileTest(filename.Data());
-	bool exists = (bool) FileTest;
-	FileTest.close();
-	if(!exists){
-		std::string errstr="tTreeHandler::load: file does not exist: ";
-		errstr+=filename.Data();
-		throw std::runtime_error(errstr);
-	}
 	//AutoLibraryLoader::enable();
-	TFile* f=new TFile(filename,"READ");
+	if(debug)
+		std::cout << "tTreeHandler::load: opening file " << filename << std::endl;
+	TFile* f=TFile::Open(filename);
 	if(!f || f->IsZombie()){
 		clear();
-		throw std::runtime_error("tTreeHandler::load: file not ok.");
+		throw std::runtime_error(
+				("tTreeHandler::load: file "+filename +" does not exist or is not ok.").Data());
 	}
+	if(debug)
+		std::cout << "tTreeHandler::load: opening tree " << treename << std::endl;
 	TTree * t = (TTree*)f->Get(treename);
 	if(!t || t->IsZombie()){
 		clear();
