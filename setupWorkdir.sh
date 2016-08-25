@@ -49,6 +49,8 @@ cd -
 mv DAnalysis/templates/Makefile .
 mv DAnalysis/templates/env.sh .
 mv DAnalysis/templates/createAnalyser.sh .
+mv DAnalysis/templates/standardConfig200PU.txt .
+
 
 scramv1 project CMSSW CMSSW_8_0_4
 

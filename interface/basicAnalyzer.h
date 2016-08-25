@@ -39,15 +39,19 @@ public:
 
 	void readConfigFile(const std::string& );
 
-	void setDataSetDirectory(const TString& dir){datasetdirectory_=dir;}
+	void setDataSetDirectory(const TString& dir){
+		datasetdirectory_=dir;
+		if(!datasetdirectory_.EndsWith("/"))
+			datasetdirectory_+="/";
+	}
 
 	void setOutDir(const TString& dir);
 	TString getOutDir()const{return outdir_;}
 
 	TString getOutPath()const{return outdir_+getOutFileName();}
 	TString getTreePath()const{
-        return TString(textFormatter::stripFileExtension(getOutFileName().Data()))+"_ntuples.root";
-    }
+		return TString(textFormatter::stripFileExtension(getOutFileName().Data()))+"_ntuples.root";
+	}
 
 
 	//setters
@@ -58,8 +62,8 @@ public:
 	void setFilePostfixReplace(const std::vector<TString>& files,const std::vector<TString>& pf);
 
 	void setTestMode(bool test){testmode_=test;}
-    
-    void setWriteTree(bool write=true){writeTree_=write;}
+
+	void setWriteTree(bool write=true){writeTree_=write;}
 
 	//getters
 	const TString& getSyst()const{return syst_;}
@@ -92,7 +96,7 @@ protected:
 
 	tTreeHandler* tree(){return tree_;}
 
-    //adders
+	//adders
 	TH1* addPlot(TH1* histo);
 	TTree* addTree(const TString& name="DAnalysis");
 
@@ -123,19 +127,20 @@ private:
 	TString replaceExtension(TString filename );
 
 
+
 	std::vector<TString> infiles_,legentries_;
 	std::vector<int> colz_;
 	std::vector<double> norms_;
 	std::vector<size_t> legords_;
 	std::vector<bool> issignal_;
 	std::vector<TString> extraopts_;
-    std::map<TString,TH1*> histos_;
+	std::map<TString,TH1*> histos_;
 
-    Bool_t rewriteoutfile_=true;
-    Bool_t rewritentuple_=true;
-    Bool_t writeTree_=true;
-    TFile *ntuplefile_;
-    TTree *ntuples_;
+	Bool_t rewriteoutfile_=true;
+	Bool_t rewritentuple_=true;
+	Bool_t writeTree_=true;
+	TFile *ntuplefile_;
+	TTree *ntuples_;
 
 	///child variables
 	TString inputfile_;

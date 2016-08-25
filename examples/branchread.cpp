@@ -37,6 +37,7 @@ private:
 	 *
 	 */
 	void analyze(size_t id){
+		//std::cout << "analyse() on " << getSampleFile()  <<std::endl;
 
 		//open file, get some branches (commented since input files missing)
 		//	d_ana::tTreeHandler tree(getSampleFile(),"treename");
@@ -75,22 +76,23 @@ private:
         Double_t elecPt=0;
         anatree->Branch("pte", &elecPt);
 
-		std::cout << "event loop on " << getSampleFile()  <<std::endl;
 
 		size_t nevents=tree()->entries() ;
 		if(isTestMode())
-			nevents/=100;
+			nevents/=10;
+		if(nevents<100)
+			nevents=tree()->entries() ;
 
 		for(size_t i=0;i<nevents;i++){
 
 			tree()->setEntry(i); //associate event entry
+			reportStatus(i,nevents);
 
 			//std::cout << elecs.size() <<std::endl;
 			if(elecs.size()>0) {
 				histo->Fill(elecs.at(0)->PT);
                 elecPt=elecs.at(0)->PT;   
             }
-			reportStatus(i,nevents);
 			//usleep(4e4);
 
 			//	size_t njets=jets.content()->size(); //how to access the branch content
@@ -110,8 +112,8 @@ int main(){
 	exampleanalyser ana;
 
 
-	ana.readConfigFile("exampleinput.txt");
-
+	ana.readConfigFile("/afs/cern.ch/user/j/jkiesele/Delphes/myin.txt");
+	//ana.readConfigFile("exampleinput.txt");
 	ana.start();
 
 }
