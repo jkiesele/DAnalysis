@@ -13,13 +13,6 @@ stackPlotter::stackPlotter()
 {}
 
 stackPlotter::~stackPlotter(){
-	//for(auto& it: stacks_) {
-	//	if(it.second)
-	//		delete it.second;
-	//}
-	
-    //stacks_.clear();
-
     if(outfile_) {
         outfile_->Close();
         //delete outfile_;
@@ -65,13 +58,8 @@ void stackPlotter::moveDirHistsToStacks(TDirectory* tdir){
             
         std::pair<Int_t,TH1*> newEntry(tMI.legendorder,cHist);
 
-        // initialize the THStack if needed
-        if(!stacks_[mapName]) {
-            if(debug)
-                std::cout << "stackPlotter::moveDirHistsToStacks || Initializing THStacks..." << std::endl; 
-            THStack *stack = new THStack(mapName,mapName);
-            stacks_[mapName]=stack;
-
+        // initialize the stack info if needed
+        if(!stacksLegEntries_.count(mapName)) {
             std::vector<std::pair<Int_t,TH1*> > legInfo(0);
             legInfo.push_back(newEntry);
             stacksLegEntries_[mapName] = legInfo;
@@ -82,12 +70,9 @@ void stackPlotter::moveDirHistsToStacks(TDirectory* tdir){
         cHist->SetMarkerStyle(kNone);
         cHist->SetMarkerColor(kBlack);
         cHist->SetLineColor(kBlack);
-        cHist->SetTitle(tMI.legendname);
+        cHist->SetTitle(mapName);
         cHist->SetName(tMI.legendname);
        
-        // add plot to stack 
-        stacks_[mapName]->Add(cHist,"HIST");
-
         std::vector<std::pair<Int_t,TH1*> > legEntries = stacksLegEntries_[mapName];
         if(debug)
             std::cout << "stackPlotter::moveDirHistsToStacks || legEntries size is " << legEntries.size() << std::endl; 
@@ -120,19 +105,20 @@ void stackPlotter::plotStack(const TString& key) {
 
     TCanvas *c = new TCanvas(key,key,800,600);
     TLegend *leg = new TLegend(0.75,0.75,0.95,0.95);
-    THStack *stack = stacks_[key];
+    THStack *stack = new THStack();
     std::vector<std::pair<Int_t,TH1*> > legEntries = stacksLegEntries_[key];
-
-    if(!stack) {
-        std::cout << "ERROR (stackPlotter::plotStack): stack '" 
-                  << key << "' does not exist!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
 
     for(size_t i=0; i < legEntries.size(); i++) {
        TString legName = legEntries.at(i).second->GetName();
        if(legName == "") continue;
-       leg->AddEntry(legEntries.at(i).second,legName,"F");
+       stack->Add(legEntries.at(i).second,"HIST");
+       stack->SetTitle(legEntries.at(i).second->GetTitle());
+       stack->SetName(legEntries.at(i).second->GetTitle());
+
+       //mirror entry for legend 
+       leg->AddEntry(legEntries.at(legEntries.size()-1-i).second,
+                     legEntries.at(legEntries.size()-1-i).second->GetName(),
+                     "F");
     }
 
     // draw plot and legend
@@ -205,7 +191,7 @@ void stackPlotter::plot() {
     // plot all the stacks & save appropriately
     if(debug)
         std::cout << "stackPlotter::plot || Plotting all the canvases" << std::endl; 
-    for(const auto& it : stacks_) {
+    for(const auto& it : stacksLegEntries_) {
         plotStack(it.first);
     }
 
