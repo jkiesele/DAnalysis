@@ -63,12 +63,11 @@ private:
 
     // utils for stacks
     std::map<TString,THStack*> stacks_;
-    std::map<TString, std::vector< std::pair<TH1*,TString> > > stacksLegEntries_;
+    std::map<TString, std::vector< std::pair<Int_t,TH1*> > > stacksLegEntries_;
     void moveDirHistsToStacks(TDirectory* tdir);
     void plotStack(const TString& key);
 
     // runtime settings
-    Int_t  nDirs_=0;
     Bool_t rewriteoutfile_=true;
     Bool_t saveplots_=true;
     Bool_t savecanvases_=false;

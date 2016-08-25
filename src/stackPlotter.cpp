@@ -35,12 +35,11 @@ void stackPlotter::moveDirHistsToStacks(TDirectory* tdir){
     metaInfo tMI;
     tMI.extractFrom(tdir);
     
-    //if(debug) {
-    //    std::cout << "stackPlotter::moveDirHistsToStacks || metaInfo color=" << tMI.color << std::endl; 
-    //    std::cout << "stackPlotter::moveDirHistsToStacks || metaInfo legendname=" << tMI.legendname<< std::endl; 
-    //
-    //    tdir->ls();
-    //}
+    if(debug) {
+        std::cout << "stackPlotter::moveDirHistsToStacks || metaInfo color=" << tMI.color << std::endl; 
+        std::cout << "stackPlotter::moveDirHistsToStacks || metaInfo legendname=" << tMI.legendname<< std::endl; 
+        std::cout << "stackPlotter::moveDirHistsToStacks || metaInfo legendorder=" << tMI.legendorder << std::endl; 
+    }
 
 
     TIter    histIter(tdir->GetListOfKeys());
@@ -56,33 +55,60 @@ void stackPlotter::moveDirHistsToStacks(TDirectory* tdir){
         if(!cHistObj->InheritsFrom(TH1::Class())) continue; 
     
         if(debug)
-            std::cout << "stackPlotter::moveDirHistsToStacks || Found histogram " << cHistKey->GetName(); 
+            std::cout << "stackPlotter::moveDirHistsToStacks || Found histogram " 
+                      << cHistKey->GetName() << std::endl; 
 
         // prepare the histogram to be added to the stack
         TH1* cHist = (TH1*) cHistObj->Clone();
         cHist->SetDirectory(0);
+        TString mapName = cHist->GetName();
+            
+        std::pair<Int_t,TH1*> newEntry(tMI.legendorder,cHist);
+
+        // initialize the THStack if needed
+        if(!stacks_[mapName]) {
+            if(debug)
+                std::cout << "stackPlotter::moveDirHistsToStacks || Initializing THStacks..." << std::endl; 
+            THStack *stack = new THStack(mapName,mapName);
+            stacks_[mapName]=stack;
+
+            std::vector<std::pair<Int_t,TH1*> > legInfo(0);
+            legInfo.push_back(newEntry);
+            stacksLegEntries_[mapName] = legInfo;
+        }
+        
         cHist->SetFillColor(tMI.color);
         cHist->SetFillStyle(1001);
         cHist->SetMarkerStyle(kNone);
         cHist->SetMarkerColor(kBlack);
         cHist->SetLineColor(kBlack);
         cHist->SetTitle(tMI.legendname);
-
-        // initialize the THStack if needed
-        if(!stacks_[cHist->GetName()]) {
-            THStack *stack = new THStack(cHist->GetName(),cHist->GetName());
-            stacks_[cHist->GetName()]=stack;
-
-            std::vector<std::pair<TH1*,TString> > legInfo(nDirs_+1);
-            stacksLegEntries_[cHist->GetName()] = legInfo;
-        }
+        cHist->SetName(tMI.legendname);
        
         // add plot to stack 
-        stacks_[cHist->GetName()]->Add(cHist,"HIST");
-        if(tMI.legendorder < nDirs_+1) {
-            stacksLegEntries_[cHist->GetName()].at(tMI.legendorder) 
-                = std::pair<TH1*,TString>(cHist,tMI.legendname);
+        stacks_[mapName]->Add(cHist,"HIST");
+
+        std::vector<std::pair<Int_t,TH1*> > legEntries = stacksLegEntries_[mapName];
+        if(debug)
+            std::cout << "stackPlotter::moveDirHistsToStacks || legEntries size is " << legEntries.size() << std::endl; 
+        for(size_t i=0; i < legEntries.size(); i++) {
+            if(legEntries.at(i).second == cHist && legEntries.at(i).first == tMI.legendorder) break;
+
+            if(legEntries.at(i).first >= tMI.legendorder) {
+                if(debug)
+                    std::cout << "stackPlotter::moveDirHistsToStacks || i is " << i << std::endl; 
+                stacksLegEntries_[mapName].insert(stacksLegEntries_[mapName].begin()+i,newEntry);
+                break;
+            }
+
+            if(i==legEntries.size()-1) {
+                stacksLegEntries_[mapName].push_back(newEntry);
+                break;
+            }
         }
+
+        if(debug)
+            std::cout << "stackPlotter::moveDirHistsToStacks || legEntries size is " << legEntries.size() << std::endl; 
     }
 
 }
@@ -95,7 +121,7 @@ void stackPlotter::plotStack(const TString& key) {
     TCanvas *c = new TCanvas(key,key,800,600);
     TLegend *leg = new TLegend(0.75,0.75,0.95,0.95);
     THStack *stack = stacks_[key];
-    std::vector<std::pair<TH1*,TString> > legEntries = stacksLegEntries_[key];
+    std::vector<std::pair<Int_t,TH1*> > legEntries = stacksLegEntries_[key];
 
     if(!stack) {
         std::cout << "ERROR (stackPlotter::plotStack): stack '" 
@@ -104,9 +130,9 @@ void stackPlotter::plotStack(const TString& key) {
     }
 
     for(size_t i=0; i < legEntries.size(); i++) {
-       TString legName = legEntries.at(i).second;
+       TString legName = legEntries.at(i).second->GetName();
        if(legName == "") continue;
-       leg->AddEntry(legEntries.at(i).first,legName,"F");
+       leg->AddEntry(legEntries.at(i).second,legName,"F");
     }
 
     // draw plot and legend
@@ -116,7 +142,7 @@ void stackPlotter::plotStack(const TString& key) {
 
     // save and exit
     if(saveplots_) {
-       c->SaveAs(key+".pdf");
+       c->SaveAs(outdir_+"/"+key+".pdf");
     }
 
     if(savecanvases_ && outfile_) {
@@ -140,7 +166,6 @@ void stackPlotter::plot() {
     if(debug)
         std::cout << "stackPlotter::plot || input file '" << infile_ << "' is being read..." << std::endl; 
 
-    nDirs_  = fIn->GetListOfKeys()->GetSize();
     TIter   dirIter(fIn->GetListOfKeys());
     TObject *cDirObj;
     TKey    *key;
@@ -211,6 +236,7 @@ int main(int argc, const char** argv){
         exit(EXIT_FAILURE);
     }
 
+    system((TString("mkdir -p ")+TString(argv[2])).Data());
     d_ana::stackPlotter sPlots;
 
     sPlots.rewriteOutfile(true);
