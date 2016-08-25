@@ -8,19 +8,23 @@ CC_FLAGS += -I$(DELPHES_PATH)
 CC_FLAGS += -MMD
 
 
-
+all: libDAnalysis.so stackPlotter
 
 libDAnalysis.so: $(OBJ_FILES)
 	g++ -shared $(LD_FLAGS) -o $@ $^
+	
+	
+stackPlotter: libDAnalysis.so
+	g++ -Wall $(LD_FLAGS) -L$(DANALYSISPATH) -o $@ $^  
+	
 
 obj/%.o: src/%.cpp
 	g++ $(CC_FLAGS) -c -o $@ $<
 
-exe:
-	g++ -g -o stackPlotter.exe -Wall $(LD_FLAGS) -L$(DANALYSISPATH) -lDAnalysis obj/stackPlotter.o  
 
 clean: 
 	rm -f obj/*.o obj/*.d
 	rm -f libDAnalysis.so
+	rm -f stackPlotter
 
 -include $(OBJ_FILES:.o=.d)
