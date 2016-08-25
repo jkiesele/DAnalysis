@@ -13,31 +13,35 @@ stackPlotter::stackPlotter()
 {}
 
 stackPlotter::~stackPlotter(){
-	for(auto& it: stacks_) {
-		if(it.second)
-			delete it.second;
-	}
+	//for(auto& it: stacks_) {
+	//	if(it.second)
+	//		delete it.second;
+	//}
 	
-    stacks_.clear();
+    //stacks_.clear();
 
     if(outfile_) {
-        delete outfile_;
+        outfile_->Close();
+        //delete outfile_;
     }
 }
 
 
 void stackPlotter::moveDirHistsToStacks(TDirectory* tdir){
+    if(debug)
+        std::cout << "stackPlotter::moveDirHistsToStacks" << std::endl; 
     
     // get metainfo from directory, else exit TODO
     metaInfo tMI;
     //tMI.extractFrom(tdir);
 
-    TList* histList = (TList*) tdir->GetListOfKeys();
-    TIter  histIter(histList);
+    TIter    histIter(tdir->GetListOfKeys());
     TObject* cHistObj;
+    TKey*    cHistKey;
 
     // loop through keys in the directory
-    while((cHistObj=histIter())) {
+    while((cHistKey = (TKey*) histIter())) {
+        cHistObj=tdir->Get(cHistKey->GetName());
         if(!cHistObj->InheritsFrom(TH1::Class())) continue; 
 
         // prepare the histogram to be added to the stack
@@ -63,6 +67,8 @@ void stackPlotter::moveDirHistsToStacks(TDirectory* tdir){
 
 
 void stackPlotter::plotStack(const TString& key) {
+    if(debug)
+        std::cout << "stackPlotter::plotStack" << std::endl; 
 
     TCanvas *c = new TCanvas(key,key,800,600);
     THStack *stack = stacks_[key];
@@ -93,21 +99,28 @@ void stackPlotter::plotStack(const TString& key) {
 
 
 void stackPlotter::plot() {
+    if(debug)
+        std::cout << "stackPlotter::plot" << std::endl; 
+
     gROOT->SetBatch(true);
     TFile *fIn = new TFile(infile_,"READ");
     fIn->cd();
+    
+    if(debug)
+        std::cout << "stackPlotter::plot || input file '" << infile_ << "' is being read..." << std::endl; 
 
-    TList* dirList = (TList*) fIn->GetListOfKeys();
-    TIter  dirIter(dirList);
+    TIter   dirIter(fIn->GetListOfKeys());
     TObject *cDirObj;
+    TKey    *key;
 
     // iterate over directories and get all stacks
-    while((cDirObj = dirIter())) {
+    while((key = (TKey *) dirIter())) {
+        cDirObj=fIn->Get(key->GetName());
         if(!cDirObj->InheritsFrom(TDirectory::Class())) continue; 
       
         TDirectory* cDir = (TDirectory*) cDirObj;
         if(debug)
-            std::cout << "Moving histograms from directory " << cDir->GetName() 
+            std::cout << "stackPlotter::plot || Moving histograms from directory " << cDir->GetName() 
                       << " to relevant maps." << std::endl;
 
         moveDirHistsToStacks(cDir);
@@ -115,29 +128,40 @@ void stackPlotter::plot() {
         delete cDir;
     }
     
+    if(debug)
+        std::cout << "stackPlotter::plot || input file '" << infile_ << "' has been read. Closing..." << std::endl; 
+    
     // intermediate cleanup
     fIn->Close();
     delete fIn;
-    delete dirList;
-    delete cDirObj;
 
+    if(debug)
+        std::cout << "stackPlotter::plot || Closed. Saving output..." << std::endl; 
     
     // create the outfile if need be
     if(savecanvases_) {
+        if(debug)
+            std::cout << "stackPlotter::plot || Opening output ROOT file" << std::endl; 
         TString writeOption = rewriteoutfile_ ? "REWRITE" : "UPDATE";
         outfile_ = new TFile(outdir_+"/plotter.root",writeOption);
     }
 
     // plot all the stacks & save appropriately
+    if(debug)
+        std::cout << "stackPlotter::plot || Plotting all the canvases" << std::endl; 
     for(const auto& it : stacks_) {
-        plotStack(it.first);
+        //plotStack(it.first);
     }
 
     // close, save, and cleanup
-    if(savecanvases_) {
+    if(savecanvases_ && outfile_) {
+        if(debug)
+            std::cout << "stackPlotter::plot || Closing the outfile" << std::endl; 
         outfile_->Close();
-        delete outfile_;
     }
+    
+    if(debug)
+        std::cout << "stackPlotter::plot || Done!" << std::endl; 
 }
 
 }
@@ -167,6 +191,4 @@ int main(int argc, const char** argv){
     sPlots.setLumi(1);
 
     sPlots.plot();
-
-    return 0;
 }

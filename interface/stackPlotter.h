@@ -18,6 +18,7 @@
 #include "TDirectory.h"
 #include "TString.h"
 #include "TCanvas.h"
+#include "TKey.h"
 #include <cstdlib>
 #include <iostream>
 #include <vector>
@@ -69,7 +70,7 @@ private:
     Bool_t saveplots_=true;
     Bool_t savecanvases_=true;
 	Bool_t testmode_=false;
-    Bool_t debug=false;
+    Bool_t debug=true;
 	Double_t lumi_=1;
 
     // input & output
