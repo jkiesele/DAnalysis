@@ -173,7 +173,7 @@ void stackPlotter::plot() {
     if(savecanvases_) {
         if(debug)
             std::cout << "stackPlotter::plot || Opening output ROOT file" << std::endl; 
-        TString writeOption = rewriteoutfile_ ? "REWRITE" : "UPDATE";
+        TString writeOption = rewriteoutfile_ ? "RECREATE" : "UPDATE";
         outfile_ = new TFile(outdir_+"/plotter.root",writeOption);
     }
 
@@ -191,8 +191,6 @@ void stackPlotter::plot() {
         outfile_->Close();
     }
    
-    while(1){}
-
     if(debug)
         std::cout << "stackPlotter::plot || Done!" << std::endl; 
 }
@@ -217,7 +215,7 @@ int main(int argc, const char** argv){
 
     sPlots.rewriteOutfile(true);
     sPlots.savePlots(true);
-    sPlots.saveCanvasRootFile(false);
+    sPlots.saveCanvasRootFile(true);
 
     sPlots.setInputFile(argv[1]);
     sPlots.setOutDir(argv[2]);
