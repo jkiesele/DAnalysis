@@ -33,35 +33,57 @@ void stackPlotter::moveDirHistsToStacks(TDirectory* tdir){
     
     // get metainfo from directory, else exit TODO
     metaInfo tMI;
-    //tMI.extractFrom(tdir);
+    tMI.extractFrom(tdir);
+    
+    //if(debug) {
+    //    std::cout << "stackPlotter::moveDirHistsToStacks || metaInfo color=" << tMI.color << std::endl; 
+    //    std::cout << "stackPlotter::moveDirHistsToStacks || metaInfo legendname=" << tMI.legendname<< std::endl; 
+    //
+    //    tdir->ls();
+    //}
+
 
     TIter    histIter(tdir->GetListOfKeys());
     TObject* cHistObj;
     TKey*    cHistKey;
 
+    if(debug)
+        std::cout << "stackPlotter::moveDirHistsToStacks || Iterating through histograms." << std::endl; 
+
     // loop through keys in the directory
     while((cHistKey = (TKey*) histIter())) {
         cHistObj=tdir->Get(cHistKey->GetName());
         if(!cHistObj->InheritsFrom(TH1::Class())) continue; 
+    
+        if(debug)
+            std::cout << "stackPlotter::moveDirHistsToStacks || Found histogram " << cHistKey->GetName(); 
 
         // prepare the histogram to be added to the stack
         TH1* cHist = (TH1*) cHistObj->Clone();
+        cHist->SetDirectory(0);
         cHist->SetFillColor(tMI.color);
-        cHist->SetMarkerColor(kNone);
+        cHist->SetFillStyle(1001);
+        cHist->SetMarkerStyle(kNone);
+        cHist->SetMarkerColor(kBlack);
         cHist->SetLineColor(kBlack);
         cHist->SetTitle(tMI.legendname);
-        cHist->Scale(tMI.norm);
 
         // initialize the THStack if needed
         if(!stacks_[cHist->GetName()]) {
             THStack *stack = new THStack(cHist->GetName(),cHist->GetName());
             stacks_[cHist->GetName()]=stack;
+
+            std::vector<std::pair<TH1*,TString> > legInfo(nDirs_+1);
+            stacksLegEntries_[cHist->GetName()] = legInfo;
         }
        
         // add plot to stack 
-        stacks_[cHist->GetName()]->Add(cHist);
+        stacks_[cHist->GetName()]->Add(cHist,"HIST");
+        if(tMI.legendorder < nDirs_+1) {
+            stacksLegEntries_[cHist->GetName()].at(tMI.legendorder) 
+                = std::pair<TH1*,TString>(cHist,tMI.legendname);
+        }
     }
-
 
 }
 
@@ -71,7 +93,9 @@ void stackPlotter::plotStack(const TString& key) {
         std::cout << "stackPlotter::plotStack" << std::endl; 
 
     TCanvas *c = new TCanvas(key,key,800,600);
+    TLegend *leg = new TLegend(0.75,0.75,0.95,0.95);
     THStack *stack = stacks_[key];
+    std::vector<std::pair<TH1*,TString> > legEntries = stacksLegEntries_[key];
 
     if(!stack) {
         std::cout << "ERROR (stackPlotter::plotStack): stack '" 
@@ -79,11 +103,16 @@ void stackPlotter::plotStack(const TString& key) {
         exit(EXIT_FAILURE);
     }
 
+    for(size_t i=0; i < legEntries.size(); i++) {
+       TString legName = legEntries.at(i).second;
+       if(legName == "") continue;
+       leg->AddEntry(legEntries.at(i).first,legName,"F");
+    }
+
     // draw plot and legend
     c->cd();
     stack->Draw();
-    c->Modified();
-    gPad->BuildLegend(0.75,0.75,0.95,0.95);
+    leg->Draw();
 
     // save and exit
     if(saveplots_) {
@@ -102,6 +131,8 @@ void stackPlotter::plot() {
     if(debug)
         std::cout << "stackPlotter::plot" << std::endl; 
 
+    TH1::AddDirectory(kFALSE);
+    TDirectory::AddDirectory(kFALSE);
     gROOT->SetBatch(true);
     TFile *fIn = new TFile(infile_,"READ");
     fIn->cd();
@@ -109,6 +140,7 @@ void stackPlotter::plot() {
     if(debug)
         std::cout << "stackPlotter::plot || input file '" << infile_ << "' is being read..." << std::endl; 
 
+    nDirs_  = fIn->GetListOfKeys()->GetSize();
     TIter   dirIter(fIn->GetListOfKeys());
     TObject *cDirObj;
     TKey    *key;
@@ -125,7 +157,6 @@ void stackPlotter::plot() {
 
         moveDirHistsToStacks(cDir);
 
-        delete cDir;
     }
     
     if(debug)
@@ -150,7 +181,7 @@ void stackPlotter::plot() {
     if(debug)
         std::cout << "stackPlotter::plot || Plotting all the canvases" << std::endl; 
     for(const auto& it : stacks_) {
-        //plotStack(it.first);
+        plotStack(it.first);
     }
 
     // close, save, and cleanup
@@ -159,7 +190,9 @@ void stackPlotter::plot() {
             std::cout << "stackPlotter::plot || Closing the outfile" << std::endl; 
         outfile_->Close();
     }
-    
+   
+    while(1){}
+
     if(debug)
         std::cout << "stackPlotter::plot || Done!" << std::endl; 
 }
@@ -183,7 +216,7 @@ int main(int argc, const char** argv){
     d_ana::stackPlotter sPlots;
 
     sPlots.rewriteOutfile(true);
-    sPlots.savePlots(false);
+    sPlots.savePlots(true);
     sPlots.saveCanvasRootFile(false);
 
     sPlots.setInputFile(argv[1]);

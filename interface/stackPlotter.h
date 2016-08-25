@@ -18,6 +18,7 @@
 #include "TDirectory.h"
 #include "TString.h"
 #include "TCanvas.h"
+#include "TLegend.h"
 #include "TKey.h"
 #include <cstdlib>
 #include <iostream>
@@ -62,13 +63,15 @@ private:
 
     // utils for stacks
     std::map<TString,THStack*> stacks_;
+    std::map<TString, std::vector< std::pair<TH1*,TString> > > stacksLegEntries_;
     void moveDirHistsToStacks(TDirectory* tdir);
     void plotStack(const TString& key);
 
     // runtime settings
+    Int_t  nDirs_=0;
     Bool_t rewriteoutfile_=true;
     Bool_t saveplots_=true;
-    Bool_t savecanvases_=true;
+    Bool_t savecanvases_=false;
 	Bool_t testmode_=false;
     Bool_t debug=true;
 	Double_t lumi_=1;
