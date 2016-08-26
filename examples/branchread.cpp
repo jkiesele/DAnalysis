@@ -46,28 +46,14 @@ private:
 
 
 
-		/*
-		 *
-		 * The delphes trees have arrays instead of vectors, so there needs to be some
-		 * king of explicit buffering. I did not realise this before. You can get ideas from
-		 * https://github.com/jkiesele/TtZAnalysis/blob/master/Analysis/interface/wNTBaseInterface.h
-		 *
-		 * Something with dictionaries for the Delphes classes MIGHT be needed
-		 * tTreeHandler does not work with TChains! This is due to a root limitation
-		 * (at least from root 5). But it should not be a problem.
-		 * Either hadd it or give it same legend name etc.
-		 * For same legend name, output histogram files should just be added (taking into
-		 * account the normalisation). This can be done in the writeOutput() function.
-		 * This function is thread-safe. The file access is blocked while one process writes.
-		 *
-		 */
+
 
 		d_ana::dBranchHandler<Electron> elecs(tree(),"Electron");
 
         //debug=true;
 
         // Add a histogram to the analysis
-		TH1* histo=addPlot(new TH1D("histoname1","histotitle1",100,0,100));
+		TH1* histo=addPlot(new TH1D("histoname1","histotitle1",100,0,100) , "p_{T} [GeV]", "N_{e}");
 
         // Create tree in analysis (Default name is DAnalysis)
         TTree* anatree=addTree();
@@ -75,6 +61,10 @@ private:
         // Add a branch to the tree
         Double_t elecPt=0;
         anatree->Branch("pte", &elecPt);
+
+        // Add an object collection to the tree
+        std::vector<Electron> skimmedelecs;
+        anatree->Branch("Electrons",&skimmedelecs);
 
 
 		size_t nevents=tree()->entries() ;
@@ -91,7 +81,14 @@ private:
 			//std::cout << elecs.size() <<std::endl;
 			if(elecs.size()>0) {
 				histo->Fill(elecs.at(0)->PT);
-                elecPt=elecs.at(0)->PT;   
+                elecPt=elecs.at(0)->PT;
+                skimmedelecs.clear();
+
+                for(size_t elec=0;elec<elecs.size();elec++){
+                	if(elecs.at(elec)->PT < 20 ) continue;
+                	skimmedelecs.push_back(*elecs.at(elec));
+                }
+
             }
 			//usleep(4e4);
 
@@ -107,12 +104,12 @@ private:
 };
 
 
-int main(){
+int main(int argc, char* argv[]){
 
 	exampleanalyser ana;
+	if(argc!=2)exit(-1);
 
-
-	ana.readConfigFile("/afs/cern.ch/user/j/jkiesele/Delphes/myin.txt");
+	ana.readConfigFile((std::string)argv[1]);
 	//ana.readConfigFile("exampleinput.txt");
 	ana.start();
 

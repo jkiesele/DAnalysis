@@ -97,17 +97,17 @@ protected:
 	tTreeHandler* tree(){return tree_;}
 
 	//adders
-	TH1* addPlot(TH1* histo);
-	TTree* addTree(const TString& name="DAnalysis");
+	TH1* addPlot(TH1* histo, const TString xaxis="", const TString yaxis="", const TString zaxis="");
+	TTree* addTree(const TString& name="Delphes");
 
-	const TString& getSampleFile()const{return inputfile_;}
-	TString getSamplePath()const{return datasetdirectory_+"/"+inputfile_;}
-	const TString& getLegendName()const{return legendname_;}
-	const int& getColor()const{return col_;}
-	const double& getNorm()const{return norm_;}
-	const size_t& getLegendOrder()const{return legorder_;}
-	const bool& getIsSignal()const{return signal_;}
-	void setIsSignal(bool set){signal_=set;}
+	const TString& getSampleFile()const{return thissample_.getInfile();}
+	TString getSamplePath()const{return datasetdirectory_+"/"+thissample_.getInfile();}
+	const TString& getLegendName()const{return thissample_.getLegend();}
+	const int& getColor()const{return thissample_.getColor();}
+	const double& getNorm()const{return thissample_.getNorm();}
+	const int& getLegendOrder()const{return thissample_.getLegendorder();}
+	const bool& getIsSignal()const{return thissample_.isSignal();}
+	void setIsSignal(bool set){ thissample_.setSignal(set);}
 
 	bool isTestMode()const{return testmode_;}
 
@@ -118,22 +118,83 @@ private:
 
 	void adjustNormalization(const tTreeHandler*);
 
+	std::vector<TString> lsDirectory(const TString & dir, bool& hasmetadata, const TString mdtag="metaData",const TString sampleextension=".root")const;
+
+	std::vector<unsigned long> getIndivEntries(unsigned long& totalentries, const std::vector<TString>& infiles_indirectory)const;
 
 	fileForker::fileforker_status  writeOutput();
 	fileForker::fileforker_status  runParallels(int displaystatusinterval);
 
+	/**
+	 * returns false if already exists
+	 */
+	bool writeConfigHeader(std::fstream &file)const;
+	void writeConfigFooter()const;
+
+	TString makeNTupleFileName()const;
+
+
+
 	bool createOutFile()const;
 
-	TString replaceExtension(TString filename );
+	class sampleDescriptor{
+	public:
+		sampleDescriptor(
+				const TString& Infile,
+				const TString& Legend,
+				int Color,
+				double Norm,
+				long Direntries,
+				int LegendOrder,
+				bool Issignal,
+				const TString& extraOpts
+		):infile_(Infile),
+		legend_(Legend),
+		color_(Color),
+		norm_(Norm),
+		xsec_(Norm),
+		direntries_(Direntries),
+		legendorder_(LegendOrder),
+		signal_(Issignal),
+		extraopts_(extraOpts){}
 
+		const int& getColor() const {return color_;}
+		const long& getDirentries() const {return direntries_;}
+		void setDirentries(long entr){direntries_=entr;}
+		const TString& getExtraopts() const {return extraopts_;}
+		const TString& getInfile() const {return infile_;}
+		const TString& getLegend() const {return legend_;}
+		const int& getLegendorder() const {return legendorder_;}
+		const double& getNorm() const {return norm_;}
+		const double& getXsec()const{return xsec_;}
+		void setNorm(double norm) {this->norm_ = norm;}
+		const bool& isSignal() const {return signal_;}
+		void setSignal(bool in) {signal_=in;}
+	private:
+		sampleDescriptor(){}
+		TString infile_;
+		TString legend_;
+		int color_;
+		double norm_;
+		double xsec_;
+		long direntries_;
+		int legendorder_;
+		bool signal_;
+		TString extraopts_;
+	};
 
+	std::string configfile_;
 
+	std::vector<sampleDescriptor> samples_;
+	/*
 	std::vector<TString> infiles_,legentries_;
 	std::vector<int> colz_;
 	std::vector<double> norms_;
+	std::vector<long> direntriesv_;
 	std::vector<size_t> legords_;
 	std::vector<bool> issignal_;
 	std::vector<TString> extraopts_;
+	 */
 	std::map<TString,TH1*> histos_;
 
 	Bool_t rewriteoutfile_=true;
@@ -142,6 +203,8 @@ private:
 	TFile *ntuplefile_;
 	TTree *ntuples_;
 
+	sampleDescriptor thissample_;
+	/*
 	///child variables
 	TString inputfile_;
 	TString legendname_;
@@ -149,6 +212,8 @@ private:
 	double norm_;
 	size_t legorder_;
 	bool signal_;
+	long direntries_;
+	 */
 
 	TString datasetdirectory_;
 

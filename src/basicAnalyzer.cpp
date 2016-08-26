@@ -11,13 +11,15 @@
 #include "../interface/helpers.h"
 #include "TH1.h"
 #include "TFile.h"
-#include<dirent.h>
-#include<unistd.h>
+#include <dirent.h>
+#include <unistd.h>
 #include <ctgmath>
+#include <sys/stat.h>
 
 #include "../interface/metaInfo.h"
 #include "classes/DelphesClasses.h"
-
+#include <fstream>
+#include "TInterpreter.h"
 
 namespace d_ana{
 
@@ -50,12 +52,7 @@ void tempFile::close(){
 
 
 basicAnalyzer::basicAnalyzer():fileForker(),
-		inputfile_(""),
-		legendname_(""),
-		col_(0),
-		norm_(1),
-		legorder_(0),
-		signal_(false),
+		thissample_("","",0,0,0,0,false,""),
 		lumi_(0),
 		freplaced_(0),
 		testmode_(false),
@@ -66,6 +63,7 @@ basicAnalyzer::basicAnalyzer():fileForker(),
 {
 	ntuplefile_=0;
 	ntuples_=0;
+	//gInterpreter->GenerateDictionary("vector<Electron>","classes/DelphesClasses.h;vector");
 }
 
 basicAnalyzer::~basicAnalyzer(){
@@ -85,14 +83,8 @@ basicAnalyzer::~basicAnalyzer(){
 
 void basicAnalyzer::process(){
 	size_t anaid=ownChildIndex();
-	inputfile_=infiles_.at(anaid); //modified in some mode options
-	legendname_=legentries_.at(anaid);
-	col_=colz_.at(anaid);
-	legorder_=legords_.at(anaid);
-	signal_=issignal_.at(anaid);
-	norm_=norms_.at(anaid);
-	isMC_ = legendname_ != datalegend_;
-	//open tree
+	thissample_=samples_.at(anaid);
+	isMC_=thissample_.getLegend() != datalegend_;
 	tree_=new tTreeHandler(getSamplePath(),treename_);
 	adjustNormalization(tree_);
 	analyze(anaid);
@@ -109,7 +101,8 @@ void basicAnalyzer::readConfigFile(const std::string& inputfile){
 		std::cout << "basicAnalyzer::readFileList" << std::endl;
 	using namespace d_ana;
 	using namespace std;
-
+	configfile_=textFormatter::getFilename(inputfile,false);
+	std::cout << configfile_ << std::endl;
 	fileReader fr;
 	fr.setDelimiter(",");
 	fr.setComment("$");
@@ -133,7 +126,7 @@ void basicAnalyzer::readConfigFile(const std::string& inputfile){
 	fr.readFile(inputfile);
 
 	//check if ok
-
+	/*
 	infiles_.clear();
 	legentries_.clear();
 	colz_.clear();
@@ -142,6 +135,8 @@ void basicAnalyzer::readConfigFile(const std::string& inputfile){
 	issignal_.clear();
 	extraopts_.clear();
 	std::vector<std::string> infiles;
+	 */
+	samples_.clear();
 
 	/*
 	 *
@@ -156,214 +151,121 @@ void basicAnalyzer::readConfigFile(const std::string& inputfile){
 
 	std::cout << "basicAnalyzer::readFileList: reading input file " << std::endl;
 
-	std::string lscommandbegin;
-	if(datasetdirectory_.BeginsWith("root://")){ //this is xrootd
-		std::string fullpath=datasetdirectory_.Data();
-		std::string pathworoot=fullpath.substr(7, fullpath.length());
-		std::string server=pathworoot.substr(0,pathworoot.find_first_of("/"));
-		server="root://"+server;
-		std::string localpath=pathworoot.substr(pathworoot.find_first_of("/")+1,pathworoot.length());
-		lscommandbegin="eos "+server;
-		lscommandbegin+=" ls ";
-		lscommandbegin+=localpath;
 
-		//make checks regarding eos and grid proxys before continuing
-
-
-	}
-	else{
-		lscommandbegin="ls ";
-		lscommandbegin+=datasetdirectory_.Data();
-	}
 
 
 	for(size_t line=0;line<fr.nLines();line++){
-		if(fr.nEntries(line) < 5){
+		if(fr.nEntries(line) < 6){
 			std::cout << "basicAnalyzer::readFileList: line " << line << " of inputfile is broken ("<<fr.nEntries(line)<< " entries.)" <<std::endl;
-			sleep(2);
+			std::cout << fr.getReJoinedLine(line) <<std::endl;
+			sleep(1);
 			continue;
 		}
 
-		TString singleinfile=(fr.getData<TString>(line,0));
-		const TString legentry=fr.getData<TString>(line,1);
-		const int col=fr.getData<int>    (line,2);
-
-		std::vector<TString> infileshere;
-		std::vector<double> normsinfl;
-		const double xsec=fr.getData<double> (line,3);
-		const size_t legndord=fr.getData<size_t> (line,4);
-		bool issignal=false;
-		if(fr.nEntries(line) > 5)
-			issignal=fr.getData<bool> (line,5);
-		TString otheropts;
+		TString       if_sample=(fr.getData<TString>(line,0));
+		const TString if_legentry=fr.getData<TString>(line,1);
+		const int     if_col=fr.getData<int>    (line,2);
+		const double  if_xsec=fr.getData<double> (line,3);
+		bool autoentries=fr.getData<TString>(line,4)=="auto";
+		int if_entries=-1;
+		if(!autoentries)
+			if_entries=fr.getData<int>(line,4);
+		if(if_entries<0)
+			autoentries=true;
+		if(autoentries)
+			if_entries=0;
+		const int if_legndord=fr.getData<int> (line,5);
+		bool if_issignal=false;
 		if(fr.nEntries(line) > 6)
-			otheropts=fr.getData<TString> (line,6);
-
-		if(singleinfile.EndsWith("/")){//this is a directory
-			//ls files in dir
-			//check for entries and total entries
-			//modify and fill normsinfl entries
-			//fill infileshere entries
-
-			std::string command=lscommandbegin;
-
-			command+=singleinfile.Data();
-			tempFile tempfile;
-
-			/*
-			 char nameBuff[32];
-
-			memset(nameBuff,0,sizeof(nameBuff));
-			strncpy(nameBuff,"/tmp/myTmpFile-XXXXXX",21);
-			int tmpfile=mkstemp(nameBuff);
-			unlink(nameBuff);
-			if(tmpfile<1) {
-				//error
-			}*/
-			std::string pipeto=" 2>&1 >";
-			pipeto+=tempfile.getName();
-			system((command+pipeto).data());
-			//read-back
-			fileReader lsfr;
-			lsfr.setDelimiter(" ");
-			lsfr.setTrim("\n");
-			lsfr.readFile(tempfile.getName());
-
-			std::cout << "basicAnalyser::INFO: the input " << singleinfile << " is a directory.\nCreating file list and adjusting cross-sections to partial contributions of files\n(might take a while for many files. It is strongly encouraged to \"hadd\" them before!)... \n" <<std::endl; ;
+			if_issignal=fr.getData<bool> (line,6);
+		TString if_otheropts;
+		if(fr.nEntries(line) > 7)
+			if_otheropts=fr.getData<TString> (line,7);
 
 
+		std::vector<double> normsinfl;
+		if( ! if_sample.EndsWith("/")){ //single file
+			sampleDescriptor sampled(
+					if_sample,
+					if_legentry,
+					if_col,
+					if_xsec,
+					if_entries,
+					if_legndord,
+					if_issignal,
+					if_otheropts
+			);
 
-			bool hasmetadata=false;
-			for(size_t lsline=0;lsline<lsfr.nLines();lsline++){
-				for(size_t lsentr=0;lsentr<lsfr.nEntries(lsline);lsentr++){
-					const TString singlefile=singleinfile+lsfr.getData<TString>(lsline,0);
-					if(singlefile.EndsWith(".root"))
-						infileshere.push_back(singlefile);
-					if(singlefile=="metaData"){
-						hasmetadata=true;
-					}
-				}
-			}
-			lsfr.clear();
-			tempfile.close();
+			samples_.push_back(sampled);
+		}
+		else{//this is a directory
 
-			size_t usefiles=infileshere.size();
-			if(testmode_ && usefiles){
-				usefiles=infileshere.size()/100;
-				if(!usefiles)
-					usefiles=1;
-				infileshere.erase(infileshere.begin()+usefiles,infileshere.end());
-			}
+			bool hasmetadata;
+			std::vector<TString> infiles_indirectory;
+			infiles_indirectory=lsDirectory(if_sample,hasmetadata);
 
-			unsigned long totalentries=0;
-			std::vector<unsigned long> indiventries;
-			if(hasmetadata){
-				//try to read from text files
-				hasmetadata=false;
-
-				//FIXME to be implemented in a next release
-				/*
-				command+="/metaData";
-				tempfile.create();
-				pipeto=" 2>&1 >";
-				pipeto+=tempfile.getName();
-				system((command+pipeto).data());
-				const TString fullpath=singleinfile+"/metaData/";
-
-				 */
-
-			}
-			if(!hasmetadata){
-				//gEnv->SetValue("XNet.Debug", 2);
-
-				//needs to be forked for root xrootd limitations (did I mention, I don't appreciate roots global vars...)
-				IPCPipes<unsigned long> indiv;
-				indiv.open((usefiles));
-				IPCPipe<unsigned long> totalentr;
-				int fret=fork();
-				if(!fret){
-					for(size_t subinfile=0;subinfile<usefiles;subinfile++){
-
-						double percent= (((double)subinfile)/((double)usefiles));
-						percent=round(percent*100. );
-						std::cout << "\x1b[A\r" <<  percent << "%" <<std::endl;
-
-						tTreeHandler treetmp(datasetdirectory_+infileshere.at(subinfile),treename_ );
-
-						unsigned long thisentr=treetmp.entries();
-						totalentries+=thisentr;
-						indiventries.push_back(thisentr);
-
-					}
-					for(size_t subinfile=0;subinfile<usefiles;subinfile++){
-						indiv.get(subinfile)->pwrite(indiventries.at(subinfile));
-					}
-					totalentr.pwrite(totalentries);
-					std::cout << "\x1b[A\r" << "100%" <<std::endl;
-					exit(EXIT_SUCCESS);
-				}
-				else{
-					for(size_t subinfile=0;subinfile<usefiles;subinfile++){
-						unsigned long entry=indiv.get(subinfile)->pread();
-						indiventries.push_back(entry);
-					}
-					totalentries=totalentr.pread(); //block until child is done
-				}
-			}
-			gROOT->Reset();
-			std::cout << std::endl;
-			for(size_t subinfile=0;subinfile<usefiles;subinfile++){
-				double modifiedxsec=xsec;
-				modifiedxsec *= (double)indiventries.at(subinfile)/(double)totalentries;
-				std::cout << infileshere.at(subinfile) << " xsec: " << xsec
-						<< " modified: " << modifiedxsec<< std::endl;
-				normsinfl.push_back(modifiedxsec);
-			}
-			if(infileshere.size()<1){
+			if(infiles_indirectory.size()<1){
 				throw std::runtime_error("basicAnalyzer::readFileList: no input files found in this directory");
 			}
 
-		}
-		else{
-			infileshere.push_back(singleinfile);
-			normsinfl.push_back(xsec);
-		}
-		for(size_t infl=0;infl<infileshere.size();infl++){
-			infiles_.push_back   (infileshere.at(infl));
-			if(debug)
-				std::cout << "basicAnalyzer::readFileList: " << infiles_.at(infiles_.size()-1) << std::endl;
-			legentries_.push_back(legentry);
-			colz_.push_back      (col);
-			norms_.push_back     (normsinfl.at(infl));
-			legords_.push_back    (legndord);
-			issignal_.push_back(issignal);
-			extraopts_.push_back(otheropts);
-		}
-	}
-	std::vector<std::string > newinfiles;
-	for(size_t i=0;i<infiles_.size();i++){
-		//if(legentries_.at(i) == dataname_)
-		//	continue;
-		infiles_.at(i) =   replaceExtension(infiles_.at(i));
-		///load pdf files
-		newinfiles.push_back(infiles_.at(i).Data());
+			if(testmode_ && infiles_indirectory.size()){
+				size_t usefiles=infiles_indirectory.size();
+				usefiles=infiles_indirectory.size()/100;
+				if(!usefiles)
+					usefiles=1;
+				infiles_indirectory.erase(infiles_indirectory.begin()+usefiles,infiles_indirectory.end());
+			}
+
+			unsigned long totalentries=0;
+			if(autoentries){
+				std::cout << "basicAnalyser::INFO: the input " << if_sample << " is a directory.\nCreating file list and adjusting cross-sections to partial contributions of files\n(might take a while for many files. It is strongly encouraged to \"hadd\" them before!)... \n" <<std::endl; ;
+
+				if(hasmetadata){
+					//try to read from text files
+					hasmetadata=false;
+					//FIXME to be implemented in a next release, read from the text files
+				}
+
+				if(!hasmetadata){
+					getIndivEntries(totalentries, infiles_indirectory);
+				}
+				std::cout << "extracted the total number of entries in directory: "<<totalentries
+						<<"\n(add this to your configuration file instead of \"auto\"!)\n"<< std::endl;
+			}
+			else{//not auto entries
+				totalentries=if_entries;
+			}
+			for(size_t infl=0;infl<infiles_indirectory.size();infl++){
+				sampleDescriptor sampled(
+						infiles_indirectory.at(infl),
+						if_legentry,
+						if_col,
+						if_xsec,
+						totalentries,
+						if_legndord,
+						if_issignal,
+						if_otheropts
+				);
+				if(debug)
+					std::cout << "basicAnalyzer::readConfigFile: added sample\n"
+					<<sampled.getInfile() <<" "<< sampled.getDirentries()<< std::endl;
+				samples_.push_back(sampled);
+				if(debug)
+					std::cout << "basicAnalyzer::readFileList: " << sampled.getLegend() << std::endl;
+			}
+
+		}//directory
 
 	}
-	fileForker::setInputFiles(newinfiles);
-
-
+	std::vector<std::string > ffinfiles;
+	for(size_t i=0;i<samples_.size();i++){
+		ffinfiles.push_back(samples_.at(i).getInfile().Data());
+	}
+	fileForker::setInputFiles(ffinfiles);
+	std::cout << "basicAnalyzer::readFileList: input file successfully read. Free for changes." <<std::endl;
 }
 
 
-TString basicAnalyzer::replaceExtension(TString filename){
-	for(size_t i=0;i<ftorepl_.size();i++){
-		if(filename.Contains(ftorepl_.at(i))){
-			freplaced_++;
-			return filename.ReplaceAll(ftorepl_.at(i),fwithfix_.at(i));
-		}
-	}
-	return filename;
-}
 
 fileForker::fileforker_status basicAnalyzer::runParallels(int interval){
 	prepareSpawn();
@@ -377,8 +279,8 @@ fileForker::fileforker_status basicAnalyzer::runParallels(int interval){
 	time_t started;
 	time(&started);
 	time(&now);
-	std::vector<double> lastAliveSignals(infiles_.size());
-	std::vector<int>    lastBusyStatus(infiles_.size());
+	std::vector<double> lastAliveSignals(samples_.size());
+	std::vector<int>    lastBusyStatus(samples_.size());
 	while(stat==fileForker::ff_status_parent_busy || stat== fileForker::ff_status_parent_childstospawn){
 
 		fileForker::fileforker_status writestat=spawnChildsAndUpdate();
@@ -386,19 +288,19 @@ fileForker::fileforker_status basicAnalyzer::runParallels(int interval){
 		if(writestat == ff_status_parent_filewritten || (interval>0  && counter>interval)){
 			time(&now);
 			double runningseconds = fabs(difftime(started,now));
-			std::cout << "PID    "<< textFormatter::fixLength("Filename",50)                << " statuscode " << "     progress " <<std::endl;
+			std::cout << "PID    "<< textFormatter::fixLength("Sample",30)                << " statuscode " << "         progress " <<std::endl;
 			int totalstatus=0;
-			for(size_t i=0;i<infiles_.size();i++){
+			for(size_t i=0;i<samples_.size();i++){
 				totalstatus+=getBusyStatus(i);
 				double percentpersecond=getBusyStatus(i)/runningseconds;
 				double estimate=(100-getBusyStatus(i))/percentpersecond;
 				std::cout
 				<< textFormatter::fixLength(textFormatter::toString(getChildPids().at(i)),7)
-				<< textFormatter::fixLength((legentries_.at(i)+"_"+toTString(i)).Data(),         50) <<" "
-				<< textFormatter::fixLength(translateStatus(getStatus(i)), 15)
+				<< textFormatter::fixLength((samples_.at(i).getLegend()+"_"+toTString(i)).Data(),         30) <<" "
+				<< textFormatter::fixLength(translateStatus(getStatus(i)), 20)
 				<< textFormatter::fixLength(textFormatter::toString(getBusyStatus(i))+"%",4,false);
 				if(getBusyStatus(i)>4 && getStatus(i) == ff_status_child_busy){
-					std::cout  <<" ETA: ";
+					std::cout  <<" - ";
 					int minutes=estimate/60;
 					std::cout << std::setw(2) << std::setfill('0')<< minutes << ":" <<
 							std::setw(2) << std::setfill('0')<<(int)(estimate - minutes*60) ;
@@ -416,25 +318,29 @@ fileForker::fileforker_status basicAnalyzer::runParallels(int interval){
 					}
 				}
 			}
-			std::cout << "total: "<< totalstatus / (100* infiles_.size()) << "%"<< std::endl;
+			std::cout << "total: "<< (int)(totalstatus / ((double)samples_.size())) << "%"<< std::endl;
 			std::cout << std::endl;
 			counter=0;
 		}
 		counter++;
 		usleep (250e3);
 	}
+
+	//check if skim file has been written. If so, add last line
+	writeConfigFooter();
+
 	std::cout << "End report:" <<std::endl;
-	std::cout << textFormatter::fixLength("Sample",30)                << " statuscode " << " progress " <<std::endl;
-	for(size_t i=0;i<infiles_.size();i++)
-		std::cout << textFormatter::fixLength((legentries_.at(i)+"_"+toTString(i)).Data(),50) << "     " << textFormatter::fixLength(translateStatus(getStatus(i)),15) <<"     " << "   " << getBusyStatus(i)<<"%"<<std::endl;
+	std::cout << textFormatter::fixLength("Sample",30)                << " statuscode " << "          progress " <<std::endl;
+	for(size_t i=0;i<samples_.size();i++)
+		std::cout << textFormatter::fixLength((samples_.at(i).getLegend()+"_"+toTString(i)).Data(),30) << " " << textFormatter::fixLength(translateStatus(getStatus(i)),20) <<" " << getBusyStatus(i)<<"%"<<std::endl;
 	std::cout << std::endl;
 
 
 	//if no data, then create pseudodata
-	if(std::find(legentries_.begin(),legentries_.end(),datalegend_) == legentries_.end()){
+	/*if(std::find(legentries_.begin(),legentries_.end(),datalegend_) == legentries_.end()){
 		///TBI!  FIXME
 	}
-
+	 */
 	return stat;
 }
 
@@ -448,19 +354,23 @@ void basicAnalyzer::setOutDir(const TString& dir){
 }
 
 
-TH1* basicAnalyzer::addPlot(TH1* histo) {
+TH1* basicAnalyzer::addPlot(TH1* histo, const TString xaxis, const TString yaxis, const TString zaxis) {
 	if(debug)
-		std::cout << "basicAnalyzer::addPlot: " << legendname_ <<std::endl;
+		std::cout << "basicAnalyzer::addPlot: " <<  thissample_.getLegend()<<std::endl;
 
 	if(histo==0) {
 		std::cout << "WARNING (basicAnalyzer::addPlot): input histogram is a null pointer. Exiting..." << std::endl;
 		exit(EXIT_FAILURE);
 	}
 
-	// TODO: format name according to some ruleset
+
 	TString formattedName=histo->GetName();
 	histo->Sumw2();
 	histo->SetName(formattedName);
+	histo->GetXaxis()->SetTitle(xaxis);
+	histo->GetYaxis()->SetTitle(yaxis);
+	if(histo->GetZaxis())
+		histo->GetZaxis()->SetTitle(zaxis);
 
 	if(histos_[formattedName]) {
 		std::cout << "WARNING (basicAnalyzer::addPlot): histo " 
@@ -475,23 +385,22 @@ TH1* basicAnalyzer::addPlot(TH1* histo) {
 
 TTree* basicAnalyzer::addTree(const TString& name) {
 	if(debug)
-		std::cout << "basicAnalyzer::addTree: " << legendname_ <<std::endl;
+		std::cout << "basicAnalyzer::addTree: " << thissample_.getLegend() <<std::endl;
 
-	// TODO: format name according to some ruleset
+
+
+
 	TString formattedName=textFormatter::makeCompatibleFileName(name.Data());
-	TString tdirname=textFormatter::makeCompatibleFileName(legendname_.Data());
-	tdirname="d_"+tdirname;
-	tdirname+=ownChildIndex();
 
 	if(!ntuplefile_) {
-		ntuplefile_ = new TFile(getOutDir() + tdirname+"_"+getTreePath(),"RECREATE");
+		ntuplefile_ = new TFile(getOutDir() + makeNTupleFileName(),"RECREATE");
 
 		// write meta info
 		metaInfo meta;
-		meta.legendname=legendname_;
-		meta.color=col_;
-		meta.norm=norm_;
-		meta.legendorder=legorder_;
+		meta.legendname=thissample_.getLegend();
+		meta.color=thissample_.getColor();
+		meta.norm=thissample_.getNorm();
+		meta.legendorder=thissample_.getLegendorder();
 		meta.Write();
 	}
 
@@ -503,17 +412,121 @@ TTree* basicAnalyzer::addTree(const TString& name) {
 
 
 void  basicAnalyzer::adjustNormalization(const tTreeHandler*t){
-	double entries=t->entries();
-	double xsec=norm_;
-	norm_= xsec*lumi_/entries;
+	long entries=t->entries();
+	double xsec=thissample_.getXsec();
+	double multiplier=1;
+	if(thissample_.getDirentries()){
+		multiplier=((double)entries)/(double)thissample_.getDirentries();
+		if(debug)
+			std::cout << "multi for "<< thissample_.getInfile() << ": "<<multiplier << std::endl;
+	}else{
+		thissample_.setDirentries(entries);
+	}
+	thissample_.setNorm( xsec*lumi_/((double)entries) * multiplier);
+}
+
+std::vector<TString> basicAnalyzer::lsDirectory(const TString & dir, bool& hasmetadata, const TString mdtag,const TString sampleextension)const{
+
+	std::vector<TString> filesindir;
+	std::string lscommandbegin;
+	if(datasetdirectory_.BeginsWith("root://")){ //this is xrootd
+		std::string fullpath=datasetdirectory_.Data();
+		std::string pathworoot=fullpath.substr(7, fullpath.length());
+		std::string server=pathworoot.substr(0,pathworoot.find_first_of("/"));
+		server="root://"+server;
+		std::string localpath=pathworoot.substr(pathworoot.find_first_of("/")+1,pathworoot.length());
+		lscommandbegin="eos "+server;
+		lscommandbegin+=" ls ";
+		lscommandbegin+=localpath;
+
+		//make checks regarding eos and grid proxys before continuing!! FIXME
+
+
+	}
+	else{
+		lscommandbegin="ls ";
+		lscommandbegin+=datasetdirectory_.Data();
+	}
+	std::string command=lscommandbegin;
+
+	command+=dir.Data();
+	tempFile tempfile;
+
+	std::string pipeto=" 2>&1 >";
+	pipeto+=tempfile.getName();
+	system((command+pipeto).data());
+	//read-back
+	fileReader lsfr;
+	lsfr.setDelimiter(" ");
+	lsfr.setTrim("\n ");
+	lsfr.readFile(tempfile.getName());
+
+	hasmetadata=false;
+	for(size_t lsline=0;lsline<lsfr.nLines();lsline++){
+		for(size_t lsentr=0;lsentr<lsfr.nEntries(lsline);lsentr++){
+			const TString singlefile=dir+lsfr.getData<TString>(lsline,0);
+			if(singlefile.EndsWith(sampleextension))
+				filesindir.push_back(singlefile);
+			if(singlefile==mdtag){
+				hasmetadata=true;
+			}
+		}
+	}
+	lsfr.clear();
+	tempfile.close();
+	return filesindir;
+}
+
+
+
+std::vector<unsigned long> basicAnalyzer::getIndivEntries(unsigned long& totalentries, const std::vector<TString>& infiles_indirectory)const{
+
+	//needs to be forked for root xrootd limitations
+	//(did I mention, I don't like root...)
+	size_t usefiles=infiles_indirectory.size();
+	std::vector<unsigned long> indiventries;
+	totalentries=0;
+	IPCPipes<unsigned long> indiv;
+	indiv.open(usefiles);
+	IPCPipe<unsigned long> totalentr;
+	int fret=fork();
+	if(!fret){
+		for(size_t subinfile=0;subinfile<usefiles;subinfile++){
+
+			double percent= (((double)subinfile)/((double)usefiles));
+			percent=round(percent*100. );
+			std::cout << "\x1b[A\r" <<  percent << "%" <<std::endl;
+
+			tTreeHandler treetmp(datasetdirectory_+infiles_indirectory.at(subinfile),treename_ );
+
+			unsigned long thisentr=treetmp.entries();
+			totalentries+=thisentr;
+			indiventries.push_back(thisentr);
+
+		}
+		for(size_t subinfile=0;subinfile<usefiles;subinfile++){
+			indiv.get(subinfile)->pwrite(indiventries.at(subinfile));
+		}
+		totalentr.pwrite(totalentries);
+		std::cout << "\x1b[A\r" << "100%" <<std::endl;
+		exit(EXIT_SUCCESS);
+	}
+	//parent
+	for(size_t subinfile=0;subinfile<usefiles;subinfile++){
+		unsigned long entry=indiv.get(subinfile)->pread();
+		indiventries.push_back(entry);
+	}
+	totalentries=totalentr.pread(); //block until child is done
+
+	return indiventries;
 }
 
 fileForker::fileforker_status basicAnalyzer::writeOutput(){
 	if(debug)
-		std::cout << "basicAnalyzer::writeOutput: " << legendname_ <<std::endl;
+		std::cout << "basicAnalyzer::writeOutput: " << thissample_.getLegend() <<std::endl;
 
 	// get the directory name to write to
-	TString tdirname=textFormatter::makeCompatibleFileName(legendname_.Data());
+	TString tdirname=textFormatter::makeCompatibleFileName(thissample_.getLegend() .Data());
 	tdirname="d_"+tdirname; //necessary otherwise problems with name "signal" in interactive root sessions
 
 	// do we want to recreate the output file?
@@ -531,10 +544,10 @@ fileForker::fileforker_status basicAnalyzer::writeOutput(){
 
 	// write meta info
 	metaInfo meta;
-	meta.legendname=legendname_;
-	meta.color=col_;
-	meta.norm=norm_;
-	meta.legendorder=legorder_;
+	meta.legendname=thissample_.getLegend() ;
+	meta.color=thissample_.getColor();
+	meta.norm=thissample_.getNorm();
+	meta.legendorder=thissample_.getLegendorder();
 	if(!exists)
 		meta.Write();
 	/*
@@ -584,14 +597,30 @@ fileForker::fileforker_status basicAnalyzer::writeOutput(){
 			ntuples_->Write();
 			ntuplefile_->Close();
 			delete ntuplefile_;
+
+			//create or open output list to be read back
+			std::fstream skimfile;
+			writeConfigHeader(skimfile);
+			skimfile<< makeNTupleFileName() <<", ";
+			skimfile << getLegendName() <<", ";
+			skimfile << getColor() << ", ";
+			skimfile << thissample_.getXsec() << ", ";
+			skimfile << thissample_.getDirentries() <<",";
+			skimfile << getLegendOrder() ;
+			if(thissample_.isSignal())
+				skimfile << ", true ";
+			else
+				skimfile << ", false ";
+			if(thissample_.getExtraopts().Length()>0)
+				skimfile << ", " << thissample_.getExtraopts();
+			skimfile<< "\n";
+			skimfile.close();
+
 		}
 	} catch(Int_t e) {
 		std::cout << "ERROR (basicAnalyzer::writeHistos): Problem while writing ntuples to outfile" <<std::endl;
 		return ff_status_child_aborted;
 	}
-
-
-
 
 	// clean-up
 	outFile->Close();
@@ -601,7 +630,60 @@ fileForker::fileforker_status basicAnalyzer::writeOutput(){
 	return ff_status_child_success;
 }
 
+bool basicAnalyzer::writeConfigHeader(std::fstream &file)const{
 
+	const std::string outfile=(outdir_+"skimmed_"+configfile_).Data();
+	struct stat buffer;
+	bool alreadyexists = (stat (outfile.c_str(), &buffer) == 0);
+
+	if(alreadyexists){
+
+		file.open(outfile, std::fstream::out | std::fstream::app);
+
+		return alreadyexists;
+	}
+
+	//	file.open(outfile, std::fstream::out | std::fstream::trunc);
+
+	file.open(outfile, std::fstream::out);
+	file << "[config-begin]\n\t";
+	file << "Outputdir  = set_new_output_directory" <<"\n\t";
+	file << "Outputfile = " << getOutFileName() <<"\n\t";
+	file << "Lumi = " << lumi_ <<"\n\t";
+	file << "Maxchilds = " << getMaxChilds() <<"\n\t";
+	file << "Samplesdir = " << getOutDir() <<"\n";
+	file << "[config-end]\n\n[inputfiles-begin]\n";
+
+	file.close();
+	writeConfigHeader(file); //write this sample
+	return false;
+}
+void basicAnalyzer::writeConfigFooter()const{
+	const std::string outfile=(outdir_+"skimmed_"+configfile_).Data();
+	struct stat buffer;
+	bool alreadyexists = (stat (outfile.c_str(), &buffer) == 0);
+	if(!alreadyexists)return;
+
+	std::fstream file(outfile, std::fstream::out | std::fstream::app);
+	file << "[inputfiles-end]\n";
+	file.close();
+
+	std::cout << "basicAnalyzer::writeConfigFooter: configuration file for skim written to:\n"
+			<< outfile << std::endl;
+
+}
+
+TString basicAnalyzer::makeNTupleFileName()const{
+
+
+	TString tdirname=textFormatter::makeCompatibleFileName(thissample_.getLegend().Data());
+
+	tdirname+=ownChildIndex();
+	tdirname+="_ntuple.root";
+
+	return tdirname;
+
+}
 void basicAnalyzer::reportStatus(const Long64_t& entry,const Long64_t& nEntries){
 	static Long64_t step=0;
 	static Long64_t next=0;

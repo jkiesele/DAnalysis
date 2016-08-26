@@ -123,6 +123,8 @@ protected:
 
 	void abortChild(size_t idx);
 
+	const size_t& getMaxChilds()const{return maxchilds_;}
+
 private:
 	int checkForWriteRequest();
 	bool writeReady_block();
