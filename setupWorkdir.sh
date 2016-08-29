@@ -6,7 +6,6 @@
 
 SCRIPT=$(readlink -f "$0")
 BASEDIR=$(dirname "${SCRIPT}")
-BASEDIR=$DANALYSISPATH
 OLDDIR=`pwd`
 
 workdir=$1
