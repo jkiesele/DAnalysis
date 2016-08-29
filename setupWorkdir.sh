@@ -45,6 +45,7 @@ cp $BASEDIR/templates/*.txt config/
 cd $OLDDIR
 
 echo "Working directory ${workdir} set up."
+echo "Please first set up the environment by sourcing <workdir>/env.(csh)."
 echo "To create a skeleton analyser, run createAnalyser.sh <analyser name>"
 echo "Standard configuration files for the analyser can be found in the subdirectory \"config\""
 echo "The file testConfig.txt located there, gives further indications."
