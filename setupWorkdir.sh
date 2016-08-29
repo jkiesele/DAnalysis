@@ -2,15 +2,10 @@
 #!/bin/zsh
 
 
-#dont use basedir etc. check for $DANALYSISPATH environment and link there
-
-if [[ $DANALYSISPATH == "" ]]
-then
-	echo "the DAnalysis environment must be set. To do this, source the env.(c)sh script in the same directory this script is located in"
-    exit -1
-fi
 
 
+SCRIPT=$(readlink -f "$0")
+BASEDIR=$(dirname "${SCRIPT}")
 BASEDIR=$DANALYSISPATH
 OLDDIR=`pwd`
 
@@ -42,12 +37,13 @@ mkdir obj
 mkdir config
 
 cp $BASEDIR/templates/Makefile .
-sed -e 's;##workdir##;'${workdir}';g' < $BASEDIR/templates/env.sh > $workdir/env.sh
+sed -e 's;##workdir##;'${workdir}';g' -e 's;##basedir##;'${BASEDIR}';g' < $BASEDIR/templates/env.sh > $workdir/env.sh
 sed -e 's;##workdir##;'${workdir}';g' < $BASEDIR/templates/createAnalyser.sh > $workdir/createAnalyser.sh
 chmod +x $workdir/createAnalyser.sh
 #maybe more of those
 cp $BASEDIR/templates/*.txt config/
 
+cd $OLDDIR
 
 echo "Working directory ${workdir} set up."
 echo "To create a skeleton analyser, run createAnalyser.sh <analyser name>"
