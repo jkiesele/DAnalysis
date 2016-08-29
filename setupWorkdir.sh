@@ -53,6 +53,7 @@ echo "Standard configuration files for the analyser can be found in the subdirec
 echo "The file testConfig.txt located there, gives further indications."
 echo ""
 echo "To run production, the corresponding scripts are reachable in \$DANALYSISPATH/scripts"
+echo "A README file containing instructions for production is also located there"
 
 
 
