@@ -76,9 +76,7 @@ public:
 			return getOutputFileName();}
 	}
 
-	void start(){
-		runParallels(5);
-	}
+	void start();
 
 
 protected:
@@ -101,7 +99,7 @@ protected:
 	TTree* addTree(const TString& name="Delphes");
 
 	const TString& getSampleFile()const{return thissample_.getInfile();}
-	TString getSamplePath()const{return datasetdirectory_+"/"+thissample_.getInfile();}
+	TString getSamplePath()const{return datasetdirectory_+thissample_.getInfile();}
 	const TString& getLegendName()const{return thissample_.getLegend();}
 	const int& getColor()const{return thissample_.getColor();}
 	const double& getNorm()const{return thissample_.getNorm();}
@@ -120,7 +118,7 @@ private:
 
 	std::vector<TString> lsDirectory(const TString & dir, bool& hasmetadata, const TString mdtag="metaData",const TString sampleextension=".root")const;
 
-	std::vector<unsigned long> getIndivEntries(unsigned long& totalentries, const std::vector<TString>& infiles_indirectory)const;
+	unsigned long getTotalEntries(const std::vector<TString>& infiles_indirectory)const;
 
 	fileForker::fileforker_status  writeOutput();
 	fileForker::fileforker_status  runParallels(int displaystatusinterval);
@@ -148,15 +146,10 @@ private:
 				int LegendOrder,
 				bool Issignal,
 				const TString& extraOpts
-		):infile_(Infile),
-		legend_(Legend),
-		color_(Color),
-		norm_(Norm),
-		xsec_(Norm),
-		direntries_(Direntries),
-		legendorder_(LegendOrder),
-		signal_(Issignal),
-		extraopts_(extraOpts){}
+		);
+
+		sampleDescriptor(const sampleDescriptor&);
+		sampleDescriptor& operator=(const sampleDescriptor& rhs);
 
 		const int& getColor() const {return color_;}
 		const long& getDirentries() const {return direntries_;}
@@ -171,7 +164,7 @@ private:
 		const bool& isSignal() const {return signal_;}
 		void setSignal(bool in) {signal_=in;}
 	private:
-		sampleDescriptor(){}
+		sampleDescriptor();
 		TString infile_;
 		TString legend_;
 		int color_;

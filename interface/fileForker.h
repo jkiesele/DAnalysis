@@ -21,7 +21,7 @@
 #include <vector>
 
 namespace d_ana{
-
+void signal_callback_handler(int signum);
 /*
  * Can do:
  * -> handle a list of input files
@@ -37,6 +37,7 @@ namespace d_ana{
  *
  */
 class fileForker{
+	friend void signal_callback_handler(int signum);
 public:
 	fileForker();
 	virtual ~fileForker();
@@ -47,6 +48,7 @@ public:
 		ff_status_child_writing,
 		ff_status_child_success,
 		ff_status_child_generror,
+		ff_status_child_segfault,
 		ff_status_child_exception,
 		ff_status_child_aborted,
 
@@ -121,7 +123,12 @@ protected:
 
 	const std::vector<pid_t>& getChildPids()const{return childPids_;}
 
-	void abortChild(size_t idx);
+	void abortChild(size_t idx, bool kill=true);
+
+	/**
+	 * Kills all childs
+	 */
+	void cleanUp();
 
 	const size_t& getMaxChilds()const{return maxchilds_;}
 
@@ -135,8 +142,10 @@ private:
 	std::vector<std::string> inputfiles_;
 	std::string outputfile_;
 
+	size_t getGlobalIndex(const size_t & runningidx)const;
+	size_t getRunningIndex(const size_t & globalidx)const;
 	///communication pipes
-
+	std::vector<int> runningidxs_;
 	IPCPipes<int> p_idx;
 	IPCPipes<int> p_busystatus;
 
@@ -155,6 +164,7 @@ private:
 	//child members
 	pid_t PID_;
 	size_t ownchildindex_;
+	size_t ownrunningindex_;
 	bool processendcalled_;
 
 
