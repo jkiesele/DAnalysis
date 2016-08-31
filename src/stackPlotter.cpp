@@ -103,14 +103,39 @@ void stackPlotter::plotStack(const TString& key) {
 	if(debug)
 		std::cout << "stackPlotter::plotStack" << std::endl;
 
-	TCanvas *c = new TCanvas(key,key,800,600);
-	TLegend *leg = new TLegend(0.75,0.75,0.95,0.95);
-	THStack *stack = new THStack();
 	std::vector<std::pair<Int_t,TH1*> > legEntries = stacksLegEntries_[key];
+	if(legEntries.size()<1) return;
+
+	TCanvas *c = new TCanvas(key,key,800,600);
+	TLegend *leg = new TLegend(0.75,0.75,0.95,0.95); //will be overwritten by style!
+	THStack *stack = new THStack();
+
+	//determine legend position TBI (add all histos, look at mean and max values etc)
+	//float max=stack->GetMaximum(); //unfortunately no mean function also not filled, yet.
+	//needs another loop on histos
+	TH1 * h=(TH1 *) legEntries.at(0).second->Clone();
+	for(size_t i=1;i<legEntries.size();i++){
+		h->Add(legEntries.at(i).second);
+	}
+	float ymax=h->GetBinContent(h->GetMaximumBin());
+	float ymin=h->GetBinContent(h->GetMinimumBin());  //   0; //assume FIXME
+	float mean=h->GetMean();
+	float xmin=h->GetBinLowEdge(1);
+	float xmax=h->GetBinLowEdge(h->GetNbinsX()+1);
+	//pass this to the style functions
+
+	delete h;
+
+
+	legendposition legpos=lp_right;
+
 
 	for(size_t i=0; i < legEntries.size(); i++) {
 		TString legName = legEntries.at(i).second->GetName();
 		if(legName == "") continue;
+
+		applyStyleToTH1(legEntries.at(i).second,legpos);
+
 		stack->Add(legEntries.at(i).second,"HIST");
 		stack->SetTitle(legEntries.at(i).second->GetTitle());
 		stack->SetName(legEntries.at(i).second->GetTitle());
@@ -122,13 +147,20 @@ void stackPlotter::plotStack(const TString& key) {
 	}
 
 	// draw plot and legend
-	if(legEntries.size()>0){
-		c->cd();
-		stack->Draw();
-		stack->GetXaxis()->SetTitle(legEntries.at(0).second->GetXaxis()->GetTitle());
-		stack->GetYaxis()->SetTitle(legEntries.at(0).second->GetYaxis()->GetTitle());
-		leg->Draw();
-	}
+
+	c->cd();
+
+	applyStyleToCanvas(c,legpos);
+
+	stack->Draw();
+	stack->GetXaxis()->SetTitle(legEntries.at(0).second->GetXaxis()->GetTitle());
+	stack->GetYaxis()->SetTitle(legEntries.at(0).second->GetYaxis()->GetTitle());
+
+	applyStyleToAxis(stack,legpos);
+	applyStyleToLegend(leg,legpos);
+
+	leg->Draw();
+
 
 	// save and exit
 	if(saveplots_) {
@@ -140,6 +172,10 @@ void stackPlotter::plotStack(const TString& key) {
 		outfile_->cd();
 		c->Write();
 	}
+
+	delete stack;
+	delete leg;
+	delete c;
 
 }
 
@@ -210,6 +246,64 @@ void stackPlotter::plot() {
 	if(debug)
 		std::cout << "stackPlotter::plot || Done!" << std::endl;
 }
+
+
+/*
+ * These can be overwritten by inheriting classes
+ *
+ */
+
+
+void stackPlotter::applyStyleToAxis(THStack * h, legendposition pos)const{
+
+	h->GetYaxis()->SetTitleSize(0.07);
+	h->GetYaxis()->SetLabelSize(0.06);
+	h->GetYaxis()->SetTitleOffset(1.25);
+
+	h->GetXaxis()->SetTitleSize(0.07);
+	h->GetXaxis()->SetLabelSize(0.06);
+	h->GetXaxis()->SetTitleOffset(0.95);
+
+	//also scale maybe
+}
+
+void stackPlotter::applyStyleToCanvas(TVirtualPad* c,legendposition pos)const{
+	c->SetBottomMargin(0.16);
+	c->SetLeftMargin(0.17);
+}
+void stackPlotter::applyStyleToTH1(TH1* h,legendposition pos)const{
+
+
+}
+
+void stackPlotter::applyStyleToLegend(TLegend* leg ,legendposition pos)const{
+	leg->SetColumnSeparation(0.1);
+	leg->SetFillStyle(0);
+	leg->SetBorderSize(0);
+
+	if(pos==lp_right){
+		leg->SetX1(0.62);
+		leg->SetX2(0.86);
+		leg->SetY1(0.32);
+		leg->SetY2(0.88);
+		leg->SetNColumns(1);
+	}
+	else if(pos==lp_top){
+		leg->SetX1(0.4);
+		leg->SetX2(0.9);
+		leg->SetY1(0.65);
+		leg->SetY2(0.88);
+		leg->SetNColumns(2);
+	}
+	else{//just use same as right-not implemented
+		leg->SetX1(0.62);
+		leg->SetX2(0.86);
+		leg->SetY1(0.32);
+		leg->SetY2(0.88);
+		leg->SetNColumns(1);
+	}
+}
+
 
 }
 

@@ -104,7 +104,9 @@ void basicAnalyzer::processEndFunction(){
 
 void basicAnalyzer::readConfigFile(const std::string& inputfile){
 	if(debug)
-		std::cout << "basicAnalyzer::readFileList" << std::endl;
+		std::cout << "basicAnalyzer::readConfigFile" << std::endl;
+	std::cout << "basicAnalyzer::readConfigFile: reading input file " << std::endl;
+
 	using namespace d_ana;
 	using namespace std;
 	configfile_=textFormatter::getFilename(inputfile,false);
@@ -130,34 +132,9 @@ void basicAnalyzer::readConfigFile(const std::string& inputfile){
 	fr.setStartMarker("[inputfiles-begin]");
 	fr.setEndMarker("[inputfiles-end]");
 	fr.readFile(inputfile);
+	std::cout << "basicAnalyzer::readConfigFile: input file read in. Free for changes." <<std::endl;
 
-	//check if ok
-	/*
-	infiles_.clear();
-	legentries_.clear();
-	colz_.clear();
-	norms_.clear();
-	legords_.clear();
-	issignal_.clear();
-	extraopts_.clear();
-	std::vector<std::string> infiles;
-	 */
 	samples_.clear();
-
-	/*
-	 *
-	 * In case a directory is given, a possibility is to split or to extend (in the end the same)
-	 * splitting further with same legend etc.
-	 *
-	 * Or the jobs are split by a script before. In this case, the stackplotter needs to be able
-	 * to handle it (can manage many files at once)
-	 * splitter needs to take care that same legends go to same job
-	 *
-	 */
-
-	std::cout << "basicAnalyzer::readFileList: reading input file " << std::endl;
-
-
 
 
 	for(size_t line=0;line<fr.nLines();line++){
@@ -270,7 +247,6 @@ void basicAnalyzer::readConfigFile(const std::string& inputfile){
 		ffinfiles.push_back(file);
 	}
 	fileForker::setInputFiles(ffinfiles);
-	std::cout << "basicAnalyzer::readFileList: input file successfully read. Free for changes." <<std::endl;
 }
 
 

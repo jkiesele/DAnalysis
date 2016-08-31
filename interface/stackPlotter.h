@@ -57,7 +57,14 @@ public:
     
 protected:
 
+	enum legendposition{lp_left,lp_top,lp_bottom,lp_right};
+
 	bool isTestMode()const{return testmode_;}
+
+	virtual void applyStyleToAxis(THStack *, legendposition pos)const;
+	virtual void applyStyleToCanvas(TVirtualPad* ,legendposition pos)const;
+	virtual void applyStyleToTH1(TH1* ,legendposition pos)const;
+	virtual void applyStyleToLegend(TLegend* ,legendposition )const;
 
 private:
 
@@ -71,7 +78,7 @@ private:
     Bool_t saveplots_=true;
     Bool_t savecanvases_=false;
 	Bool_t testmode_=false;
-    Bool_t debug=true;
+    Bool_t debug=false;
 	Double_t lumi_=1;
 
     // input & output
