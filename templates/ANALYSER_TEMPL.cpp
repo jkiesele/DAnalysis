@@ -35,6 +35,20 @@ void ANALYSER_TEMPL::analyze(size_t childid /* this info can be used for printou
 	 * For skimmed ntuples, see below
 	 */
 	d_ana::dBranchHandler<Electron> elecs(tree(),"Electron");
+	/*
+	 * Other branches might be the following
+	 * (for a full list, please inspect the Delphes sample root file with root)
+	 * For the Delphes class description, see $DELPHES_PATH/classes/DelphesClasses.h
+	 */
+	//
+	d_ana::dBranchHandler<HepMCEvent>  event(tree(),"Event");
+	d_ana::dBranchHandler<GenParticle> genpart(tree(),"Particle");
+	d_ana::dBranchHandler<Jet>         genjet(tree(),"GenJet");
+	d_ana::dBranchHandler<Jet>         jet(tree(),"Jet");
+	d_ana::dBranchHandler<Muon>        muontight(tree(),"MuonTight");
+	d_ana::dBranchHandler<Muon>        muonloose(tree(),"MuonLoose");
+	d_ana::dBranchHandler<Photon>      photon(tree(),"Photon");
+	d_ana::dBranchHandler<MissingET>   met(tree(),"MissingET");
 
 
 	/* ==SKIM==
