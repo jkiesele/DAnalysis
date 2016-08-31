@@ -57,14 +57,19 @@ public:
     
 protected:
 
-	enum legendposition{lp_left,lp_top,lp_bottom,lp_right};
+	enum legendposition{lp_left,lp_top,lp_right};
 
 	bool isTestMode()const{return testmode_;}
+
+	virtual legendposition estimateBestLegendPosition(TH1* )const;
 
 	virtual void applyStyleToAxis(THStack *, legendposition pos)const;
 	virtual void applyStyleToCanvas(TVirtualPad* ,legendposition pos)const;
 	virtual void applyStyleToTH1(TH1* ,legendposition pos)const;
 	virtual void applyStyleToLegend(TLegend* ,legendposition )const;
+
+	double yscaling=1.1;
+	double yscaling_toplegend=1.4;
 
 private:
 

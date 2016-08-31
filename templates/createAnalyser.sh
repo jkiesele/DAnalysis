@@ -33,5 +33,9 @@ sed -e 's;ANALYSER_TEMPL;'${ananame}';g' < $src/ANALYSER_TEMPL.cpp > ##workdir##
 sed -e 's;ANALYSER_TEMPL;'${ananame}';g' < $src/ANALYSER_TEMPL_EXEC.cpp > ##workdir##/bin/${ananame}.cpp
 
 echo "Skelton analyser/skimmer for the DAnalysis framework created."
-echo "The source file can be found in the \"src\" directory."
-echo "It contains further documentation. To compile the analyser, run \"make -j\""
+echo "The source file can be found in the \"src\" directory. "
+echo "It includes comments how to adapt it to the specific needs of the analysis."
+echo "To compile the analyser, run \"make -j\""
+echo "The analyser must be provided with a configuration file as input."
+echo "Please have a look at the file \"config/testConfig.txt\" that gives indications about its structure"
+echo "Other standard configuration files for the analyser can be found in the same directory."

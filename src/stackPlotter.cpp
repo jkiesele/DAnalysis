@@ -6,6 +6,7 @@
  */
 
 #include "../interface/stackPlotter.h"
+#include "TStyle.h"
 
 namespace d_ana{
 
@@ -117,17 +118,15 @@ void stackPlotter::plotStack(const TString& key) {
 	for(size_t i=1;i<legEntries.size();i++){
 		h->Add(legEntries.at(i).second);
 	}
-	float ymax=h->GetBinContent(h->GetMaximumBin());
-	float ymin=h->GetBinContent(h->GetMinimumBin());  //   0; //assume FIXME
-	float mean=h->GetMean();
-	float xmin=h->GetBinLowEdge(1);
-	float xmax=h->GetBinLowEdge(h->GetNbinsX()+1);
+//	int maxbin=h->GetMaximumBin();
+	//int minbin=h->GetMinimumBin();
+//	float ymax=h->GetBinContent(maxbin);
+	//float ymin=h->GetBinContent(minbin);
 	//pass this to the style functions
-
+	legendposition legpos=estimateBestLegendPosition(h);
 	delete h;
 
-
-	legendposition legpos=lp_right;
+	//gStyle->SetOptTitle(0);//no title
 
 
 	for(size_t i=0; i < legEntries.size(); i++) {
@@ -137,7 +136,7 @@ void stackPlotter::plotStack(const TString& key) {
 		applyStyleToTH1(legEntries.at(i).second,legpos);
 
 		stack->Add(legEntries.at(i).second,"HIST");
-		stack->SetTitle(legEntries.at(i).second->GetTitle());
+		stack->SetTitle("");//legEntries.at(i).second->GetTitle());
 		stack->SetName(legEntries.at(i).second->GetTitle());
 
 		//mirror entry for legend
@@ -158,7 +157,7 @@ void stackPlotter::plotStack(const TString& key) {
 
 	applyStyleToAxis(stack,legpos);
 	applyStyleToLegend(leg,legpos);
-
+	stack->Draw();
 	leg->Draw();
 
 
@@ -248,6 +247,39 @@ void stackPlotter::plot() {
 }
 
 
+stackPlotter::legendposition stackPlotter::estimateBestLegendPosition(TH1* h)const{
+
+//	int maxbin=h->GetMaximumBin();
+//	int minbin=h->GetMinimumBin();
+	//int nbins=h->GetNbinsX();
+
+	//float ymax=h->GetBinContent(maxbin);
+	//float ymin=h->GetBinContent(minbin);
+	float mean=h->GetMean();
+
+	float xmin=h->GetBinLowEdge(1);
+	float xmax=h->GetBinLowEdge(h->GetNbinsX()+1);
+
+
+	float range=xmax-xmin;
+	float middle=range/2+xmin;
+
+	float relative=(mean - middle)/fabs(range);
+
+	if(fabs(relative) < 0.02)
+		return lp_top;
+
+	if(relative>0)
+		return lp_left;
+
+	if(relative<0)
+		return lp_right;
+
+	else
+		return lp_right;
+}
+
+
 /*
  * These can be overwritten by inheriting classes
  *
@@ -264,7 +296,18 @@ void stackPlotter::applyStyleToAxis(THStack * h, legendposition pos)const{
 	h->GetXaxis()->SetLabelSize(0.06);
 	h->GetXaxis()->SetTitleOffset(0.95);
 
-	//also scale maybe
+	double max=h->GetMaximum();
+	double min=h->GetMinimum();
+	if(min>0 && min/(max-min)<0.1)min=0;
+	else min/=yscaling;
+
+	if(pos==lp_top)
+		max*=yscaling_toplegend;
+	else
+		max*=yscaling;
+	//why like this?
+	h->SetMaximum(max);
+	h->SetMinimum(min);
 }
 
 void stackPlotter::applyStyleToCanvas(TVirtualPad* c,legendposition pos)const{
@@ -289,15 +332,15 @@ void stackPlotter::applyStyleToLegend(TLegend* leg ,legendposition pos)const{
 		leg->SetNColumns(1);
 	}
 	else if(pos==lp_top){
-		leg->SetX1(0.4);
+		leg->SetX1(0.2);
 		leg->SetX2(0.9);
-		leg->SetY1(0.65);
-		leg->SetY2(0.88);
-		leg->SetNColumns(2);
+		leg->SetY1(0.95/yscaling_toplegend);
+		leg->SetY2(0.89);
+		leg->SetNColumns(3);
 	}
-	else{//just use same as right-not implemented
-		leg->SetX1(0.62);
-		leg->SetX2(0.86);
+	else if (pos==lp_left){
+		leg->SetX1(0.22);
+		leg->SetX2(0.46);
 		leg->SetY1(0.32);
 		leg->SetY2(0.88);
 		leg->SetNColumns(1);

@@ -357,6 +357,7 @@ TH1* basicAnalyzer::addPlot(TH1* histo, const TString xaxis, const TString yaxis
 
 
 	TString formattedName=histo->GetName();
+	formattedName=textFormatter::makeCompatibleFileName(formattedName.Data());
 	histo->Sumw2();
 	histo->SetName(formattedName);
 	histo->GetXaxis()->SetTitle(xaxis);
