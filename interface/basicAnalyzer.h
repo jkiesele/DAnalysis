@@ -110,6 +110,8 @@ protected:
 	bool isTestMode()const{return testmode_;}
 
 	void processEndFunction();
+
+	void setTreeName(const TString& name){treename_=name;}
 private:
 
 	void process();

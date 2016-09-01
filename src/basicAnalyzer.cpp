@@ -597,8 +597,7 @@ fileForker::fileforker_status basicAnalyzer::writeOutput(){
 			 */
 
 			ntuplefile_->cd();
-			meta.Write();
-			ntuples_->Write();
+			ntuples_->Write("",TObject::kWriteDelete);
 			ntuplefile_->Close();
 			delete ntuplefile_;
 

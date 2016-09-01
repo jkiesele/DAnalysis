@@ -18,21 +18,25 @@ namespace d_ana{
 
 bool fileForker::debug=false;
 
-fileForker * currentchild;
+fileForker * current;
 
-void signal_callback_handler(int signum){
-	currentchild->writeReady_block(); //pro-forma
-	currentchild->writeDone(fileForker::ff_status_child_segfault);
-
-	void *array[30];
+void segfault_callback_handler(int signum){
+	current->writeReady_block(); //pro-forma
+	current->writeDone(fileForker::ff_status_child_segfault);
+	const int lines=50;
+	void *array[lines];
 	size_t size;
 
 	// get void*'s for all entries on the stack
-	size = backtrace(array, 30);
+	size = backtrace(array, lines);
 
 	// print out all the frames to stderr
 	fprintf(stderr, "Error: signal %d:\n", signum);
 	backtrace_symbols_fd(array, size, STDERR_FILENO);
+	exit(signum);
+}
+void kill_callback_handler(int signum){
+	current->cleanUp();
 	exit(signum);
 }
 
@@ -48,13 +52,15 @@ fileForker::fileForker():ischild_(false),spawnready_(false),
 		processendcalled_(false)
 {
 
+	current=this;
 
-
+	signal(SIGHUP ,kill_callback_handler);
+	signal(SIGINT ,kill_callback_handler);
 }
 
 
 fileForker::~fileForker(){
-
+	cleanUp();
 }
 
 
@@ -72,7 +78,7 @@ fileForker::fileforker_status fileForker::prepareSpawn(){
 	p_askwrite.open(maxchilds_);
 	p_status.open(maxchilds_);
 	p_busystatus.open(maxchilds_);
-	runningidxs_.resize(maxchilds_,-1);
+	runningidxs_.resize(maxchilds_,-100);//a bit of headroom
 
 	childPids_.resize(filenumber,0);
 	runningchilds_=0;
@@ -95,36 +101,34 @@ fileForker::fileforker_status fileForker::spawnChildsAndUpdate(){
 	size_t filenumber=inputfiles_.size();
 	//spawn
 	if(filenumber>0){
-		for(size_t i=0;i<runningidxs_.size();i++){
-			if(runningidxs_.at(i)>0){
-				size_t globalidx=getGlobalIndex(i);
-				while(p_busystatus.get(i)->preadready())
-					busystatus_.at(globalidx)=p_busystatus.get(i)->pread();
-			}
-		}
-
 
 		for(int i=lastspawned_+1;i<(int)filenumber;i++){
+
 			if(runningchilds_>=maxchilds_)
 				break;
 			if(debug)
 				std::cout << "last: " << lastspawned_<< " i: "<< i << std::endl;
 
+			updateChildrenStatus();
 			int newrunidx=-1;
+
 			//search for free running index
-			for(size_t ri=0;ri<runningidxs_.size();ri++){
+			static size_t ri=0;
+			while(1){
 				if(runningidxs_.at(ri)<0){
 					newrunidx=ri;
 					runningidxs_.at(ri)=i;
 					break;
 				}
+				ri++;
+				if(ri>=runningidxs_.size())ri=0;
 			}
 
 			childPids_.at(i)=fork();
 			if(childPids_.at(i)==0){//child process
 				ischild_=true;
-				currentchild=this;
-				signal(SIGSEGV, signal_callback_handler);
+				current=this;
+				signal(SIGSEGV, segfault_callback_handler);
 				try{
 					if(debug)
 						std::cout << "fileForker::spawnChilds child "<<i << " running index: " << newrunidx << std::endl;
@@ -152,29 +156,18 @@ fileForker::fileforker_status fileForker::spawnChildsAndUpdate(){
 					std::cout << "fileForker::spawnChilds parent "<< std::endl;
 				ownchildindex_=FF_PARENTINDEX;//start processing
 				p_idx.get(newrunidx)->pwrite(i); //send start signal
-				childstatus_.at(i)=(fileforker_status)p_status.get(getRunningIndex(i))->pread();
+				//usleep(10);
+				//updateBusyStatus();
 				runningchilds_++;
 				lastspawned_=i;
 
 				//check for write requests
 			}
 		}
+		//updateBusyStatus();
 
-		//future: this could go to another thread, if so, make ++ and -- atomic
-		//here, there is no root bogus, so it should be no problem (are pipes thread safe?)
 		int it_readytowrite=checkForWriteRequest();
-		//check for improper exits
-		/*	for(size_t i=0;i<childPids_.size();i++){
-			if(childPids_.at(i)>0){
-				int sstatus=0;
-				if(waitpid(childPids_.at(i), &sstatus, WNOHANG))
-					if(WIFSIGNALED(sstatus)){//killed by a signal
-						//check
-						abortChild(i,false);
-					}
-			}
-		}*/
-
+		updateChildrenStatus();
 		if(it_readytowrite >= 0){ // daugh ready to write
 
 			size_t globalindex=getGlobalIndex(it_readytowrite);
@@ -185,6 +178,7 @@ fileForker::fileforker_status fileForker::spawnChildsAndUpdate(){
 
 			childstatus_.at(globalindex)=(fileforker_status)p_status.get(it_readytowrite)->pread();
 			//done
+			updateChildrenStatus();
 			runningidxs_.at(it_readytowrite)=-1;//free index again
 			runningchilds_--;
 			donechilds_++;
@@ -193,11 +187,6 @@ fileForker::fileforker_status fileForker::spawnChildsAndUpdate(){
 
 
 
-		for(size_t c=0;c<runningidxs_.size();c++){//update the status
-			if(runningidxs_.at(c)>0)
-				if(p_status.get(c)->preadready())
-					childstatus_.at(getGlobalIndex(c))=(fileforker_status)p_status.get(c)->pread();
-		}
 
 		if(donechilds_ == filenumber)
 			return ff_status_parent_success;
@@ -249,10 +238,7 @@ fileForker::fileforker_status fileForker::getStatus()const{
 
 
 int fileForker::getBusyStatus(const size_t& childindex){
-	size_t pos=std::find(runningidxs_.begin(),runningidxs_.end(),childindex)-runningidxs_.begin();
-	if(pos<runningidxs_.size())
-		while(p_busystatus.get(pos)->preadready())
-			busystatus_.at(childindex)=p_busystatus.get(pos)->pread();
+	updateChildrenStatus();
 	return busystatus_.at(childindex);
 }
 
@@ -288,6 +274,18 @@ size_t fileForker::getRunningIndex(const size_t & globalidx)const{
 	if(pos<runningidxs_.size())
 		return pos;
 	throw std::out_of_range("fileForker::getRunningIndex");
+}
+
+void fileForker::updateChildrenStatus(){
+	for(size_t i=0;i<runningidxs_.size();i++){
+		if(runningidxs_.at(i)>=0){
+			size_t globalidx=getGlobalIndex(i);
+			while(p_busystatus.get(i)->preadready())
+				busystatus_.at(globalidx)=p_busystatus.get(i)->pread();
+			while(p_status.get(i)->preadready())
+				childstatus_.at(globalidx)=(fileforker_status)p_status.get(i)->pread();
+		}
+	}
 }
 std::string fileForker::translateStatus(const fileforker_status& stat)const{
 #define RETURNSTATUSSTRING(x) {if(stat==ff_status_ ## x) str= #x;}
@@ -342,7 +340,6 @@ void fileForker::abortChild(size_t idx, bool dokill){
 	if(idx>=childPids_.size())
 		throw std::out_of_range("fileForker::abortChild: index");
 
-	//make nasty system call
 	if(dokill)
 		kill(childPids_.at(idx),-9);
 	childstatus_.at(idx)=ff_status_child_aborted;

@@ -21,7 +21,7 @@
 #include <vector>
 
 namespace d_ana{
-void signal_callback_handler(int signum);
+void segfault_callback_handler(int signum);
 /*
  * Can do:
  * -> handle a list of input files
@@ -37,7 +37,8 @@ void signal_callback_handler(int signum);
  *
  */
 class fileForker{
-	friend void signal_callback_handler(int signum);
+	friend void segfault_callback_handler(int signum);
+	friend void kill_callback_handler(int signum);
 public:
 	fileForker();
 	virtual ~fileForker();
@@ -144,6 +145,7 @@ private:
 
 	size_t getGlobalIndex(const size_t & runningidx)const;
 	size_t getRunningIndex(const size_t & globalidx)const;
+	void updateChildrenStatus();
 	///communication pipes
 	std::vector<int> runningidxs_;
 	IPCPipes<int> p_idx;

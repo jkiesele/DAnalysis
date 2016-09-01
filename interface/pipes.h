@@ -17,15 +17,24 @@
 #include <poll.h>
 #include <vector>
 
-#define IPC_BUFFERSIZE 128
 
+
+class IPCPipeBase{
+public:
+	IPCPipeBase();
+	~IPCPipeBase();
+private:
+	static size_t openpipes;
+};
+
+#define IPC_BUFFERSIZE 128
 /**
  * class to enable communation between programs through pipes
  * it can only pass simple and basic data formats
  * the buffer size is limited to 128
  */
 template<class T>
-class IPCPipe{
+class IPCPipe: public IPCPipeBase{
 public:
 	/**
 	 * opens a pipe with (p)read and (p)write end.
@@ -33,7 +42,7 @@ public:
 	 * buffersize is a define and set to a default of 256. In case it is to change, change IPC_BUFFERSIZE
 	 * the preadready function polls for 2 ms until it returns
 	 */
-	IPCPipe(){
+	IPCPipe():IPCPipeBase(){
 		fds[0].events = POLLRDNORM | POLLIN;
 		fds[1].events = POLLOUT | POLLWRBAND;;
 		pipe(pfds);
