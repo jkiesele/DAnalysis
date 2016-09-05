@@ -310,7 +310,42 @@ fileForker::fileforker_status basicAnalyzer::runParallels(int interval){
 					}
 				}
 			}
-			std::cout << "total: "<< (int)(totalstatus / ((double)samples_.size())) << "%"<< std::endl;
+
+			std::cout << "total: "<< (int)(totalstatus / ((double)samples_.size())) << "%  estimated time: ";
+
+			if(totalstatus){
+				float statpersecond=totalstatus/runningseconds;
+				float totestimate=((double)samples_.size()*100 -totalstatus)/statpersecond;
+				int totalminutes=totestimate/60;
+				int totalhours=totalminutes/60;
+				std::cout //<< std::setw(2) << std::setfill('0')
+				<< totalhours << ":"
+				 << std::setw(2)<< std::setfill('0')
+				<< (totalminutes-60*totalhours) << ":" <<
+				std::setw(2) << std::setfill('0')
+				<<(int)(totestimate -totalminutes*60);
+
+				//adapt status update to reasonable amount of time
+				std::cout <<"\nnext update in "  ;
+				if(totalminutes > 60){
+					interval=5*60*4; //5 minutes
+					std::cout << "5 minutes or when child exits";
+				}
+				else if(totalminutes > 10){ //adapt interval to reasonable scale
+					interval=60*4; //1 minute
+					std::cout << "1 minute or when child exits";
+				}
+				else if(totalminutes > 1){
+					interval=20*4;//20s
+					std::cout << "20 seconds or when child exits";
+				}
+				else{
+					interval=5*4;//5s
+				}
+				std::cout << std::endl;
+
+			}
+			std::cout << std::endl;
 			std::cout << std::endl;
 			counter=0;
 		}
