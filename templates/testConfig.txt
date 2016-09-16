@@ -19,6 +19,11 @@ $
 
     Outputdir  = output
     Outputfile = outputfile.root
+    
+$ The luminosity is to be given to match the cross section values listed in the section "inputfiles"
+$ In this example, the cross sections are given in fb.
+$ In other cases that may be pb and the luminosity value here needs to be multplied by 1000.
+
     Lumi       = 3000
     
 $ If the testmode is activated, only a fraction of the events will be processed.
