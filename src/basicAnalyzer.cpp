@@ -341,6 +341,7 @@ fileForker::fileforker_status basicAnalyzer::runParallels(int interval){
 				}
 				else{
 					interval=5*4;//5s
+					std::cout << "5 seconds or when child exits";
 				}
 				std::cout << std::endl;
 
