@@ -40,7 +40,12 @@ $ different input file.
 $ This Samplesdir can be a local directory or refer to off-site locations via xrootd 
     
     Samplesdir = /afs/cern.ch/user/j/jkiesele/public/testsamples
-    
+ 
+$ The analyser will have a postProcess() function. This function should be used to
+$ extract parameters from the filled histograms, do additional calculations, etc.
+$ If only this post process function should be run (the histograms are already created)
+$ then this switch can be set to true. The default is "false"
+
     RunOnOutputOnly = false
 
 [config-end]

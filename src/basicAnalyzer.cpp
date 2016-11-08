@@ -127,7 +127,7 @@ void basicAnalyzer::readConfigFile(const std::string& inputfile){
 
 	setMaxChilds(fr.getValue<int>("Maxchilds",6));
 
-	runonoutputonly_ = fr.getValue<bool>("RunOnOutputOnly");
+	runonoutputonly_ = fr.getValue<bool>("RunOnOutputOnly", false);
 
 	setDataSetDirectory(fr.getValue<TString>("Samplesdir"));
 
