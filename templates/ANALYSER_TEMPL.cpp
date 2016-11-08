@@ -8,6 +8,7 @@
 #include "interface/ANALYSER_TEMPL.h"
 
 
+
 void ANALYSER_TEMPL::analyze(size_t childid /* this info can be used for printouts */){
 
 	/*
@@ -146,3 +147,73 @@ void ANALYSER_TEMPL::analyze(size_t childid /* this info can be used for printou
 	 */
 	processEndFunction();
 }
+
+
+
+void ANALYSER_TEMPL::postProcess(){
+	/*
+	 * This function can be used to analyse the output histograms, e.g. extract a signal contribution etc.
+	 * The function can also be called directly on an output file with the histograms, if
+	 * RunOnOutputOnly = true
+	 * is set in the analyser's config file
+	 *
+	 * This function also represents an example of how the output of the analyser can be
+	 * read-back in an external program.
+	 * Just include the sampleCollection.h header and follow the procedure below
+	 *
+	 */
+
+	/*
+	 * Here, the input file to the extraction of parameters from the histograms is the output file
+	 * of the parallelised analysis.
+	 * The sampleCollection class can also be used externally for accessing the output consistently
+	 */
+	d_ana::sampleCollection samplecoll;
+	samplecoll.readFromFile(getOutPath());
+
+	std::vector<TString> alllegends = samplecoll.listAllLegends();
+
+	/*
+	 * Example how to process the output.
+	 * Usually, one would define the legendname of the histogram to be used here
+	 * by hand, e.g. "signal" or "background".
+	 * To make this example run in any case, I am using alllegends.at(0), which
+	 * could e.g. be the signal legend.
+	 *
+	 * So in practise, the following would more look like
+	 * samplecoll.getHistos("signal");
+	 */
+	if(alllegends.size()>0){
+		d_ana::histoCollection histos=samplecoll.getHistos(alllegends.at(0));
+
+		/*
+		 * here, the histogram created in the analyze() function is selected and evaluated
+		 * The histoCollection maintains ownership (you don't need to delete the histogram)
+		 */
+		const TH1* myplot=histos.getHisto("histoname1");
+
+		std::cout << "(example output): the integral is " << myplot->Integral() <<std::endl;
+
+		/*
+		 * If the histogram is subject to changes, please clone it and take ownership
+		 */
+
+		TH1* myplot2=histos.cloneHisto("histoname1");
+
+		/*
+		 * do something with the histogram
+		 */
+
+		delete myplot2;
+	}
+
+	/*
+	 * do the extraction here.
+	 */
+
+
+
+}
+
+
+

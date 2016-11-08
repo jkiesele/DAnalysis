@@ -27,7 +27,6 @@ public:
 
 	void extractFrom(const TString& str);
 
-
 	void extractFrom( TDirectory* dir);
 
 	TString legendname;

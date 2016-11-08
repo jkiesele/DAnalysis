@@ -9,6 +9,7 @@
 #define ANALYSER_TEMPL_H_
 
 #include "interface/basicAnalyzer.h"
+#include "interface/sampleCollection.h"
 #include "classes/DelphesClasses.h"
 
 
@@ -21,7 +22,7 @@ public:
 private:
 	void analyze(size_t id);
 
-
+	void postProcess();
 };
 
 

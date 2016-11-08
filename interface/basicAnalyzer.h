@@ -85,6 +85,13 @@ protected:
 	 * Implements the event loop
 	 */
 	virtual void analyze(size_t )=0;
+
+	/**
+	 * Implements the extraction of parameters or similar from the output
+	 */
+	virtual void postProcess()=0;
+
+
 	/**
 	 * for child processes
 	 * reports the Status (% of events already processed) to the main program
@@ -225,6 +232,8 @@ private:
 
 	TString treename_;
 	tTreeHandler* tree_;
+
+	bool runonoutputonly_;
 };
 
 

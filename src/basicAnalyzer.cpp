@@ -60,7 +60,8 @@ basicAnalyzer::basicAnalyzer():fileForker(),
 		isMC_(true),
 		datalegend_("data"),
 		treename_("Delphes"),
-		tree_(0)
+		tree_(0),
+		runonoutputonly_(false)
 {
 	ntuplefile_=0;
 	ntuples_=0;
@@ -126,6 +127,8 @@ void basicAnalyzer::readConfigFile(const std::string& inputfile){
 
 	setMaxChilds(fr.getValue<int>("Maxchilds",6));
 
+	runonoutputonly_ = fr.getValue<bool>("RunOnOutputOnly");
+
 	setDataSetDirectory(fr.getValue<TString>("Samplesdir"));
 
 	fr.setRequireValues(true);
@@ -136,6 +139,10 @@ void basicAnalyzer::readConfigFile(const std::string& inputfile){
 
 	samples_.clear();
 
+	if(runonoutputonly_){
+		std::cout << "Set to processing the (previously produced) output only, will not run on events." <<std::endl;
+		return;
+	}
 
 	for(size_t line=0;line<fr.nLines();line++){
 		if(fr.nEntries(line) < 6){
@@ -320,7 +327,7 @@ fileForker::fileforker_status basicAnalyzer::runParallels(int interval){
 				int totalhours=totalminutes/60;
 				std::cout //<< std::setw(2) << std::setfill('0')
 				<< totalhours << ":"
-				 << std::setw(2)<< std::setfill('0')
+				<< std::setw(2)<< std::setfill('0')
 				<< (totalminutes-60*totalhours) << ":" <<
 				std::setw(2) << std::setfill('0')
 				<<(int)(totestimate -totalminutes*60);
@@ -725,12 +732,15 @@ TString basicAnalyzer::makeNTupleFileName()const{
 }
 
 void basicAnalyzer::start(){
-	try{
-		runParallels(5);
-	}catch(std::exception& e){
-		cleanUp();
-		throw std::runtime_error(e.what());
+	if(!runonoutputonly_){
+		try{
+			runParallels(5);
+		}catch(std::exception& e){
+			cleanUp();
+			throw std::runtime_error(e.what());
+		}
 	}
+	postProcess();
 }
 
 void basicAnalyzer::reportStatus(const Long64_t& entry,const Long64_t& nEntries){

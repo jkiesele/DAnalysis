@@ -40,6 +40,8 @@ $ different input file.
 $ This Samplesdir can be a local directory or refer to off-site locations via xrootd 
     
     Samplesdir = /afs/cern.ch/user/j/jkiesele/public/testsamples
+    
+    RunOnOutputOnly = false
 
 [config-end]
 
