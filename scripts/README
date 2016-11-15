@@ -1,7 +1,10 @@
 Submission of Delphes jobs on lxbatch
 ======================================
 
-Setup environment:
+
+
+
+Setup environment: DOES NOT APPLY TO prepareDelphesSubmission.py
 ------------------
 
 ```

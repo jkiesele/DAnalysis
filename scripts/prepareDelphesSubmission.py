@@ -14,6 +14,8 @@ parser.add_argument("--nJobs",default=1,help="Number of jobs to be submitted to 
 parser.add_argument("--scenario",default='0PU',choices=['0PU', '200PU'],help="Scenario for the simulation. Choices: '0pu' or '200PU'")
 args = parser.parse_args()
 
+cmsswbase=os.environ.get('CMSSW_BASE')
+delphespath=os.environ.get('DELPHES_PATH')
 location=os.getcwd();
 os.mkdir(args.submissionDir)
 os.mkdir(args.outputDir)
@@ -116,7 +118,7 @@ for i in range(args.nJobs):
   line = line + "Next:numberShowEvent = 0           ! print event record n times" + "\n" + "\n"
   line = line + "! 3) Set the input LHE file" + "\n"
   line = line + "Beams:frameType = 4" + "\n"
-  line = line + "Beams:LHEF = splitLHE" + str(i) + ".lhe" + "\n"
+  line = line + "Beams:LHEF = "+args.submissionDir+"/splitLHE" + str(i) + ".lhe" + "\n"
   mycmnd.write(line)
 
 #######################
@@ -128,16 +130,19 @@ lineDelphes = ""
 
 for i in range(args.nJobs):
   line = ""
-  mycsh = open(args.submissionDir+"/submitJob"+str(i)+".csh",'w')
-  line = line + "#!/bin/csh" + "\n" + "\n"
-  line = line + "cd " + location + "\n"
-  line = line + "cmsenv" + "\n"
+  mycsh = open(args.submissionDir+"/submitJob"+str(i)+".sh",'w')
+  line = line + "#!/bin/sh" + "\n" + "\n"
+  line = line + "cd " + cmsswbase + "\n"
+  line = line + "eval `scramv1 runtime -sh`" + "\n"
+  line = line + "cd " + delphespath +"\n" 
+  line = line + "export PYTHONPATH=`pwd`/python:$PYTHONPATH\nexport LD_LIBRARY_PATH=`pwd`:$LD_LIBRARY_PATH\n"
+  line = line + "cd " + location +"\n"
   if args.scenario=="0PU":
-     line = line + "./DelphesPythia8 cards/CMS_PhaseII/CMS_PhaseII_0PU.tcl splitCmnd" + str(i) + ".cmnd " + args.outputDir + "delphes_lhe_batch" + str(i) + ".root" + "\n"
+     line = line + delphespath + "/DelphesPythia8 "+delphespath +"/cards/CMS_PhaseII/CMS_PhaseII_0PU.tcl " +args.submissionDir+"/splitCmnd" + str(i) + ".cmnd "  +args.outputDir+"/delphes_lhe_batch" + str(i) + ".root" + "\n"
   elif args.scenario=="200PU":
-     line = line + "./DelphesPythia8 cards/CMS_PhaseII/CMS_PhaseII_200PU.tcl splitCmnd" + str(i) + ".cmnd " + args.outputDir + "delphes_lhe_batch" + str(i) + ".root" + "\n"
+     line = line + delphespath + "/DelphesPythia8 "+delphespath +"/cards/CMS_PhaseII/CMS_PhaseII_200PU.tcl " +args.submissionDir+"/splitCmnd" + str(i) + ".cmnd " +args.outputDir+"/delphes_lhe_batch" + str(i) + ".root" + "\n"
   mycsh.write(line)
-  lineDelphes = lineDelphes + "bsub -q 8nh -o /dev/null -e /dev/null < "+args.submissionDir+"/submitJob" + str(i) + ".csh" + "\n"
+  lineDelphes = lineDelphes + "bsub -q 8nh -o /dev/null -e /dev/null < "+args.submissionDir+"/submitJob" + str(i) + ".sh" + "\n"
 
 myfinalfile.write(lineDelphes)
-
+os.system("chmod +x SubmitDelphes.sh")
