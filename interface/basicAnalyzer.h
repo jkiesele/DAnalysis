@@ -110,7 +110,8 @@ protected:
 	const TString& getLegendName()const{return thissample_.getLegend();}
 	const int& getColor()const{return thissample_.getColor();}
 	const double& getNorm()const{return thissample_.getNorm();}
-	const int& getLegendOrder()const{return thissample_.getLegendorder();}
+	const double& getXsec()const{return thissample_.getXsec();}
+        const int& getLegendOrder()const{return thissample_.getLegendorder();}
 	const bool& getIsSignal()const{return thissample_.isSignal();}
 	void setIsSignal(bool set){ thissample_.setSignal(set);}
 
