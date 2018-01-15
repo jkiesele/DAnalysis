@@ -24,9 +24,11 @@ namespace d_ana{
 
 
 class tBranchHandlerBase{
+
+    friend class tTreeHandler;
 public:
-	tBranchHandlerBase():gotentry_(false),t_(0),buf_max_(1){}
-	tBranchHandlerBase(size_t buf):gotentry_(false),t_(0),buf_max_(buf),missingbranch_(false){}
+	tBranchHandlerBase():gotentry_(false),t_(0),buf_max_(1),referenced_(false){}
+	tBranchHandlerBase(size_t buf):gotentry_(false),t_(0),buf_max_(buf),missingbranch_(false),referenced_(false){}
 	virtual ~tBranchHandlerBase(){}
 
 	const TString& getBranchName()const{return branchname_;}
@@ -40,7 +42,11 @@ public:
 
 	const size_t & getBufMax()const{return buf_max_;}
 
+	bool referenced()const{return referenced_;}
+
 protected:
+
+	virtual void getEntry(const Long64_t& entry)=0;
 
 	void handleReturns(int,bool&,bool)const;
 
@@ -53,6 +59,7 @@ protected:
 	TString branchname_;
 	size_t buf_max_;
 	bool missingbranch_;
+	bool referenced_;
 };
 
 
@@ -138,13 +145,14 @@ template<class T>
 class tBranchHandler : public tBranchHandlerBase{
 	template<class U>
 	friend class dBranchHandler;
+	friend class tTreeHandler;
 public:
 	tBranchHandler():tBranchHandlerBase(),pcontent_(0),branch_(0),
 	isPrimitive_(false),isArray_(false){
 		// doesn't do anything
 		throw std::logic_error("tBranchHandler: default constructor should not be used");
 	}
-	tBranchHandler(tTreeHandler * t, const TString& branchname,  size_t buf_max=1 ):tBranchHandlerBase(buf_max),
+	tBranchHandler(tTreeHandler * t, const TString& branchname,bool referenced=false,  size_t buf_max=1 ):tBranchHandlerBase(buf_max),
 			branch_(0),isPrimitive_(false),isArray_(false){
 		if(!t){
 			throw std::runtime_error("tBranchHandler: tree pointer is NULL!");
@@ -155,7 +163,7 @@ public:
 
 		branchname_=branchname;
 		t_=t;
-
+		referenced_=referenced;
 
 		int ret= tBranchHandlerHelpers::tBranchHandler_createContentsAndAssociate
 				(this,realcontent_,pcontent_,branch_,isPrimitive_,isArray_);

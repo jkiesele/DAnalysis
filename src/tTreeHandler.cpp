@@ -103,6 +103,10 @@ void tTreeHandler::setEntry(const Long64_t& in){
 	for(size_t i=0;i<assobranches_.size();i++)
 		assobranches_.at(i)->newEntry();
 	tree()->LoadTree(entry_);
+	for(auto& b:assobranches_){
+	    if(b->referenced())
+	        b->getEntry(entry_);
+	}
 }
 void tTreeHandler::setPreCache(){
 	struct stat filestatus;

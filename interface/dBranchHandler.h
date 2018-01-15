@@ -29,8 +29,8 @@ namespace d_ana{
 template<class T>
 class dBranchHandler{
 public:
-	dBranchHandler(tTreeHandler * t, const TString& branchname):
-		sizebranch_(t,branchname+"_size"),databranch_(t,branchname,1){
+	dBranchHandler(tTreeHandler * t, const TString& branchname, bool referenced=false):
+		sizebranch_(t,branchname+"_size",referenced),databranch_(t,branchname,referenced,1){
 
 		if(databranch_.realcontent_->Capacity() ){//root doesn't want you to delete here
 			databranch_.realcontent_->Clear();
@@ -85,6 +85,7 @@ public:
 		databranch_.realcontent_=0;
 		databranch_.pcontent_=0;
 	}
+
 
 
 	T  * at(const size_t & idx){
