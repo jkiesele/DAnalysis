@@ -61,7 +61,8 @@ basicAnalyzer::basicAnalyzer():fileForker(),
 		datalegend_("data"),
 		treename_("Delphes"),
 		tree_(0),
-		runonoutputonly_(false)
+		runonoutputonly_(false),
+		killthreshold_(1800)
 {
 	ntuplefile_=0;
 	ntuples_=0;
@@ -264,7 +265,7 @@ fileForker::fileforker_status basicAnalyzer::runParallels(int interval){
 	int counter=0;
 	interval*=4; //to make it roughly seconds
 
-	double killthreshold=1800; //seconds. Kill after 30 Minutes without notice
+	//double killthreshold=1800; //seconds. Kill after 30 Minutes without notice
 
 	time_t now;
 	time_t started;
@@ -310,7 +311,7 @@ fileForker::fileforker_status basicAnalyzer::runParallels(int interval){
 					lastAliveSignals.at(i)=runningseconds;
 				}
 				else if(getStatus(i) == ff_status_child_busy){
-					if(runningseconds-lastAliveSignals.at(i) > killthreshold){
+					if(runningseconds-lastAliveSignals.at(i) > killthreshold_){
 						//for a long time no signal, but "busy" something is very likely wrong
 						std::cout << "-> seems to be hanging. Process will be killed." <<std::endl;
 						abortChild(i);

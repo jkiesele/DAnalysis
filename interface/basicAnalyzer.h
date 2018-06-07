@@ -78,6 +78,13 @@ public:
 
 	void start();
 
+	/**
+	 * Defines the threshold in seconds after which a child process is killed
+	 * if no progress (less than 1% progress) is reported back to the main program.
+	 */
+    void setKillThreshold(int nseconds){
+    	killthreshold_=nseconds;
+    }
 
 protected:
 
@@ -235,6 +242,7 @@ private:
 	tTreeHandler* tree_;
 
 	bool runonoutputonly_;
+	int killthreshold_;
 };
 
 
