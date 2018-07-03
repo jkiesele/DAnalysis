@@ -45,11 +45,11 @@ void ANALYSER_TEMPL::analyze(size_t childid /* this info can be used for printou
 	d_ana::dBranchHandler<HepMCEvent>  event(tree(),"Event");
 	d_ana::dBranchHandler<GenParticle> genpart(tree(),"Particle");
 	d_ana::dBranchHandler<Jet>         genjet(tree(),"GenJet");
-	d_ana::dBranchHandler<Jet>         jet(tree(),"Jet");
+	d_ana::dBranchHandler<Jet>         jet(tree(),"JetPUPPI");
 	d_ana::dBranchHandler<Muon>        muontight(tree(),"MuonTight");
 	d_ana::dBranchHandler<Muon>        muonloose(tree(),"MuonLoose");
-	d_ana::dBranchHandler<Photon>      photon(tree(),"Photon");
-	d_ana::dBranchHandler<MissingET>   met(tree(),"MissingET");
+	d_ana::dBranchHandler<Photon>      photon(tree(),"PhotonLoose");
+	d_ana::dBranchHandler<MissingET>   met(tree(),"PuppiMissingET");
 
 
 	/* ==SKIM==

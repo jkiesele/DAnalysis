@@ -130,7 +130,7 @@ void basicAnalyzer::readConfigFile(const std::string& inputfile){
 
 	runonoutputonly_ = fr.getValue<bool>("RunOnOutputOnly", false);
 
-	setDataSetDirectory(fr.getValue<TString>("Samplesdir"));
+	setDataSetDirectory(fr.getValue<TString>("Samplesdir",""));
 
 	fr.setRequireValues(true);
 	fr.setStartMarker("[inputfiles-begin]");

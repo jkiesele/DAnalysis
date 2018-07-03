@@ -37,9 +37,12 @@ $ different input file.
     
     Maxchilds  = 6
 
-$ This Samplesdir can be a local directory or refer to off-site locations via xrootd 
+$ This Samplesdir can be a local directory or refer to one off-site location via xrootd 
+$ Alternatively, all paths can be defined as absolute paths directly (see 'inputfiles' section)
+$ in this case, do not define this line
     
-    Samplesdir = /afs/cern.ch/user/j/jkiesele/public/testsamples
+$    Samplesdir = /path/to/the/location/of/all/samples
+    
  
 $ The analyser will have a postProcess() function. This function should be used to
 $ extract parameters from the filled histograms, do additional calculations, etc.
@@ -58,7 +61,8 @@ $ The input files are defined here. The syntax is the following (separated by ",
 $ 
 $ 1) File name relative to Samplesdir
 $    This can also be a directory relative to Samplesdir. In this case, all *.root files
-$    in it will be considered.
+$    in it will be considered. This is only recommended together with specifying the number of
+$    events manually (see bullet 5)
 $ 2) Legend name (can contain "#" for root-latex)
 $ 3) Color of the contribution (in root definition)
 $ 4) Cross section of the process
@@ -73,12 +77,14 @@ $ 7) Optional signal indicator. In case the signal has to be treated differently
 $    this can be indicated here and later checked in the loop.
 $ 8) Optional other options (not used for now)
 
+$ file stored locally at CERN
+/eos/cms/store/group/upgrade/delphes_output/YR_Delphes/Delphes342pre15/TT_TuneCUETP8M2T4_14TeV-powheg-pythia8_200PU/TT_TuneCUETP8M2T4_14TeV-powheg-pythia8_2898_0.root  , ttbar (inclusive),       900, 23, auto, 1, true
 
-delphes_testsample.root  , signal,       630, 23, auto, 1, true
-delphes_testsample.root  , background,   420, 56, auto, 2
-delphes_testsample.root  , background2,  432, 65, auto, 3
-/  ,                       background3,  431, 12, auto, 5
+$ file stored at FNAL
+root://cmseos.fnal.gov//store/user/snowmass/noreplica/YR_Delphes/Delphes342pre14_split/DYToLL-M-50_0J_14TeV-madgraphMLM-pythia8_200PU/DYToLL-M-50_0J_14TeV-madgraphMLM-pythia8_9_3.root , ZtoLL 50-inf 0j,   420, 56, auto, 2
 
-$ The last entry is an example for running over all input files in a directory
+$ file stored at DESY
+root://cms-xrd-global.cern.ch//store/group/upgrade/delphes_output/YR_Delphes/Delphes342pre15_hadd/QCD_Pt-80to120_TuneCUETP8M1_14TeV_pythia8_200PU/QCD_Pt-80to120_TuneCUETP8M1_14TeV_pythia8_200PU_10.root  , QCD,  432, 65, auto, 3
+
 
 [inputfiles-end]

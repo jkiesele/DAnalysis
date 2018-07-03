@@ -41,8 +41,13 @@ public:
 
 	void setDataSetDirectory(const TString& dir){
 		datasetdirectory_=dir;
-		if(!datasetdirectory_.EndsWith("/"))
+		if(!datasetdirectory_.EndsWith("/") && datasetdirectory_.Length()>0)
 			datasetdirectory_+="/";
+	}
+
+	//NOT USABLE RIGHT NOW, TBI
+	void addDataSetDirectoryAlias(const TString& alias, const TString directory){
+		dataset_dir_aliases_[alias]=directory;
 	}
 
 	void setOutDir(const TString& dir);
@@ -226,6 +231,7 @@ private:
 	 */
 
 	TString datasetdirectory_;
+	std::map<TString,TString> dataset_dir_aliases_;
 
 	TString syst_;
 	double lumi_;

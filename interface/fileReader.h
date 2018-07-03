@@ -94,8 +94,6 @@ public:
 	}
 	template<class T>
 	T getValue(const std::string & str, T def_val){
-		if(requirevalues_)
-			return getValue<T>(str);
 		T out;
 		std::string s(getValueString(str,true));
 		if(s.length()>0){
@@ -156,8 +154,6 @@ inline bool fileReader::getValue<bool>(const std::string & str){
 }
 template<>
 inline bool fileReader::getValue<bool>(const std::string & str, bool def_val){
-	if(requirevalues_)
-		return getValue<bool>(str);
 	bool out;
 	std::string s(getValueString(str,true));
 	if(s.length()>0){
@@ -184,8 +180,6 @@ inline std::string fileReader::getValue<std::string>(const std::string & str){
 }
 template<>
 inline std::string fileReader::getValue<std::string>(const std::string & str,  std::string   def_val){
-	if(requirevalues_)
-		return getValue<std::string>(str);
 	std::string s(getValueString(str));
 	if(s.length()<1)
 		return def_val;
@@ -206,8 +200,6 @@ inline TString fileReader::getValue<TString>(const std::string & str){
 }
 template<>
 inline TString fileReader::getValue<TString>(const std::string & str,  TString  def_val){
-	if(requirevalues_)
-		return getValue<TString>(str);
 	std::string s(getValueString(str));
 	if(s.length()<1)
 		return def_val;
