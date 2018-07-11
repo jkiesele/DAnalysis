@@ -466,8 +466,16 @@ std::vector<TString> basicAnalyzer::lsDirectory(const TString & dir, bool& hasme
 
 	std::vector<TString> filesindir;
 	std::string lscommandbegin;
-	if(datasetdirectory_.BeginsWith("root://")){ //this is xrootd
-		std::string fullpath=datasetdirectory_.Data();
+	TString datasetdir = datasetdirectory_;
+	if(datasetdir.Length()<1)
+		datasetdir=dir;
+	if (datasetdir.BeginsWith("root://dcache-cms-xrootd.desy.de")){ // dCache xrootd
+		std::string fullpath=datasetdir.Data();
+		std::string pathworoot=fullpath.substr(7, fullpath.length());
+		lscommandbegin = "gfal-ls srm://dcache-se-cms.desy.de///"+pathworoot.substr(pathworoot.find_first_of("/"),fullpath.length());
+	}
+	else if(datasetdir.BeginsWith("root://")){ //this is normal eos xrootd
+		std::string fullpath=datasetdir.Data();
 		std::string pathworoot=fullpath.substr(7, fullpath.length());
 		std::string server=pathworoot.substr(0,pathworoot.find_first_of("/"));
 		server="root://"+server;
@@ -478,15 +486,15 @@ std::vector<TString> basicAnalyzer::lsDirectory(const TString & dir, bool& hasme
 
 		//make checks regarding eos and grid proxys before continuing!! FIXME
 
-
 	}
 	else{
 		lscommandbegin="ls ";
-		lscommandbegin+=datasetdirectory_.Data();
+		lscommandbegin+=datasetdir.Data();
 	}
 	std::string command=lscommandbegin;
 
-	command+=dir.Data();
+	if(datasetdirectory_.Length()>0)
+		command+=dir.Data();
 	tempFile tempfile;
 
 	std::string pipeto=" >";
