@@ -110,6 +110,12 @@ protected:
 	 */
 	void reportStatus(const Long64_t& entry,const Long64_t& nEntries);
 
+	/**
+	 * scale the normalisation e.g. when using event (generator) weights.
+	 */
+	void scaleNormalisation(const float& factor){
+		thissample_.setNorm(thissample_.getNorm()* factor);
+	}
 
 	tTreeHandler* tree(){return tree_;}
 
@@ -123,7 +129,7 @@ protected:
 	const int& getColor()const{return thissample_.getColor();}
 	const double& getNorm()const{return thissample_.getNorm();}
 	const double& getXsec()const{return thissample_.getXsec();}
-        const int& getLegendOrder()const{return thissample_.getLegendorder();}
+    const int& getLegendOrder()const{return thissample_.getLegendorder();}
 	const bool& getIsSignal()const{return thissample_.isSignal();}
 	void setIsSignal(bool set){ thissample_.setSignal(set);}
 
