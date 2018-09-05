@@ -178,11 +178,11 @@ fileForker::fileforker_status fileForker::spawnChildsAndUpdate(){
 
 			childstatus_.at(globalindex)=(fileforker_status)p_status.get(it_readytowrite)->pread();
 			//done
+			waitpid(childPids_.at(it_readytowrite),0,0);
 			updateChildrenStatus();
 			runningidxs_.at(it_readytowrite)=-1;//free index again
 			runningchilds_--;
 			donechilds_++;
-			//childPids_.at(globalindex)=0;
 		}
 
 
